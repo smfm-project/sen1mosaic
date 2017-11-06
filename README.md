@@ -4,12 +4,12 @@ This README would normally document whatever steps are necessary to get your app
 
 ### What is this repository for? ###
 
-This repository contains tools to download, calibrate, and generate change statistics from JAXA's [ALOS mosaic](http://www.eorc.jaxa.jp/ALOS/en/palsar_fnf/fnf_index.htm) product for forest monitoring purposes.
+This repository contains tools to download, calibrate, and mosaic data from Sentinel-1.
 
 This repository includes command line tools for the following tasks:
 
-* Downloading ALOS-1 and ALOS-2 data from JAXA.
-* that...
+* This...
+* ///that...
 * ...and the other
 
 ### How do I get set up? ###
@@ -18,7 +18,7 @@ These tools are written in Python for use in Linux. All libraries used are avail
 
 ### How does it work? ###
 
-Full documentation is hosted at: http://biota.readthedocs.io/.
+Full documentation is hosted at: http://sen1mosaic.readthedocs.io/.
 
 ### Who do I talk to? ###
 
