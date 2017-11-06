@@ -197,8 +197,7 @@ if __name__ == '__main__':
 
     # Parse command line arguments    
     args = parser.parse_args()
-    
-    
+        
     # Convert arguments to absolute paths    
     args.infiles = np.array(sorted([os.path.abspath(i) for i in args.infiles]))
     args.output_dir = os.path.abspath(args.output_dir)

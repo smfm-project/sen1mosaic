@@ -125,6 +125,8 @@ def download(products_df, output_dir = os.getcwd()):
         print 'WARNING: No products found to download. Check your search terms.'
         
     else:
+        
+        print 'Downloading %s products'%str(len(products_df))
         # Download selected products
         scihub_api.download_all(products_df['uuid'], output_dir)
 
