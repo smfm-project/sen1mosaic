@@ -147,7 +147,7 @@ def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), remo
     # Step 2: Where more than one image, they need to be reassmbled into a single image    
     if len(preprocess_files) > 1: 
                             
-        # Format output files to a string separated by commas
+        # Format input files to a string separated by commas
         infiles_formatted = ".dim,".join(preprocess_files) + ".dim"
             
         # Select graph that first reassembles multiple images
@@ -162,8 +162,8 @@ def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), remo
     # Tidy up by deleting temporary intermediate files
     if remove:
         for this_file in preprocess_files:
-            os.system('rm %s'%this_file)
-            os.system('rm -r %s.data'%this_file[:-4])
+            os.system('rm %s.dim'%this_file)
+            os.system('rm -r %s.data'%this_file)
                 
         if len(preprocess_files)>1:
             os.system('rm %s'%outfile)
