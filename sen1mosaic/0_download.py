@@ -126,7 +126,7 @@ def download(products_df, output_dir = os.getcwd()):
         
     else:
         
-        print 'Downloading %s products'%str(len(products_df))
+        print 'Downloading %s product(s)'%str(len(products_df))
         # Download selected products
         scihub_api.download_all(products_df['uuid'], output_dir)
 
