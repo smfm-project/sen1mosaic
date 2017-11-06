@@ -9,19 +9,19 @@ import sys
 import uuid
 
 
-def preprocess(infile, outfile, xmlfile = '../0_calibrate.xml'):
+def preprocess(infile, outfile, xmlfile = '../cfg/0_calibrate.xml'):
     
     os.system('~/snap/bin/gpt %s -x -Pinputfile=%s -Poutputfile=%s'\
       %(xmlfile,infile,outfile)) # -c 16384M #-c 32768M -q 16
 
 
-def stitching(infiles, outfile, xmlfile = '../1_stitch_scenes.xml'):
+def stitching(infiles, outfile, xmlfile = '../cfg/1_stitch_scenes.xml'):
     
     os.system('~/snap/bin/gpt %s -x -Pinputfiles=%s -Poutputfile=%s'\
       %(xmlfile,infiles,outfile)) # -c 16384M # -c 32768M -q 16
 
 
-def correction(infile, outfile, xmlfile = '../2_terrain_correction_short.xml'):
+def correction(infile, outfile, xmlfile = '../cfg/2_terrain_correction_short.xml'):
     
     os.system('~/snap/bin/gpt %s -x -Pinputfile=%s -Poutputfile=%s'\
       %(xmlfile,infile,outfile)) # -c 16384M # -c 32768M -q 16
