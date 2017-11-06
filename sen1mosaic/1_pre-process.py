@@ -179,37 +179,40 @@ if __name__ == '__main__':
     """
     A scipt to pre-process Sentinel-1 IW GRD for mosaicking purposes.
     """
-
-    import glob
-    infiles = glob.glob('/exports/csce/datastore/geos/users/sbowers3/sen1mosaic_testing/DATA/data_2016/*.zip')
-    output_dir = os.getcwd()
     
-    """
     # Set up command line parser
-    parser = argparse.ArgumentParser()
-    parser.add_argument('infiles', metavar='N', type=str, nargs='+', help='Input files. Either specify a valid S1 input file, or multiple files through wildcards.')
-    parser.add_argument('-o', '--output', type=str, default = os.getcwd(), help="Optionally specify an output directory or file. If nothing specified, we'll apply a standard filename and output to the present working directory.")
+    parser = argparse.ArgumentParser(description = 'Pre-process Sentinel-1 IW GRD data from the Copernicus Open Access Hub for mosaicking purposes.')
+
+    parser._action_groups.pop()
+    required = parser.add_argument_group('Required arguments')
+    optional = parser.add_argument_group('Optional arguments')
+
+    # Required arguments
+    required.add_argument('infiles', metavar='N', type=str, nargs='+', help='Input files. Either specify a valid S1 input file, or multiple files through wildcards.')
+    
+    # Optional arguments
+    optional.add_argument('-o', '--output_dir', type=str, default = os.getcwd(), help="Optionally specify an output directory or file. If nothing specified, we'll apply a standard filename and output to the present working directory.")
+    optional.add_argument('-t', '--temp_dir', type=str, default = os.getcwd(), help="Optionally specify a temporary output directory. If nothing specified, we'll output intermediate files to the present working directory.")
+    optional.add_argument('-m', '--max_scenes', type=str, default = 4, help="Optionally specify a maximum number of scenes to stitch in one go. If nothing specified, we'll set this to a default of 3 scenes.")
 
     # Parse command line arguments    
     args = parser.parse_args()
-    """
+    
     
     # Convert arguments to absolute paths    
-    infiles = np.array(sorted([os.path.abspath(i) for i in infiles]))
-    output_dir = os.path.abspath(output_dir)
-    temp_dir = '/scratch/local/sbowers3/'
-    max_stitch_scenes = 4
+    args.infiles = np.array(sorted([os.path.abspath(i) for i in args.infiles]))
+    args.output_dir = os.path.abspath(args.output_dir)
            
     # Determine which images should be processed together as one contiguous overpass
-    group = getContiguousImages(infiles)
+    group = getContiguousImages(args.infiles)
     
     # Process one group at a time
     for this_group in np.unique(group):
         
-        infiles_split = splitFiles(infiles[group == this_group], max_stitch_scenes)
+        infiles_split = splitFiles(args.infiles[group == this_group], args.max_scenes)
         
         for input_files in infiles_split:
         
-            output_file = processFiles(input_files, output_dir = output_dir, temp_dir = temp_dir)
+            output_file = processFiles(input_files, output_dir = args.output_dir, temp_dir = args.temp_dir)
         
 

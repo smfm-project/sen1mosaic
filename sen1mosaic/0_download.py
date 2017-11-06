@@ -48,7 +48,7 @@ def _buildWkt(search_area):
     return wkt
 
 
-def search(search_area, start = '20140403', end = datetime.datetime.today().strftime('%Y%m%d')):
+def search(search_area, start = '20140403', end = datetime.datetime.today().strftime('%Y%m%d'), direction= '*'):
     """
     
     Searches for Sentinel-1 GRD IW images that meet conditions of date range and extent.
@@ -74,7 +74,7 @@ def search(search_area, start = '20140403', end = datetime.datetime.today().strf
 
     # Search data, filtering by options.
     products = scihub_api.query(search_polygon, beginposition = (startdate,enddate),
-                         platformname = 'Sentinel-1', producttype = 'GRD', orbitdirection='ASCENDING', sensoroperationalmode = 'IW')
+                         platformname = 'Sentinel-1', producttype = 'GRD', orbitdirection = direction, sensoroperationalmode = 'IW')
 
     # convert to Pandas DataFrame, which can be searched modified before commiting to download()
     products_df = scihub_api.to_dataframe(products)
@@ -129,7 +129,7 @@ def download(products_df, output_dir = os.getcwd()):
         scihub_api.download_all(products_df['uuid'], output_dir)
 
 
-def main(username, password, search_area, start, end, output_dir = os.getcwd()):
+def main(username, password, search_area, start, end, output_dir = os.getcwd(), direction = '*'):
     """
     Download Sentinel-1 data from the Copernicus Open Access Hub, specifying a particular tile, date ranges and degrees of cloud cover. This is the function that is initiated from the command line.
     
@@ -140,13 +140,14 @@ def main(username, password, search_area, start, end, output_dir = os.getcwd()):
         start: Start date for search in format YYYYMMDD.
         end: End date for search in format YYYYMMDD.
         output_dir: Optionally specify an output directory. Defaults to the present working directory.
+        direction: Orbital direction (either ASCENDING or DESCENDING). If not specified, both will be considered.
     """
     
     # Connect to API
     connectToAPI(username, password)
         
     # Search for files, return a data frame containing details of matching Sentinel-2 images
-    products = search(search_area, start = start, end = end)
+    products = search(search_area, start = start, end = end, direction = direction)
     
     # Identify images that already exist at the download location and remove them from products dataframe
     products = removeDuplicates(products, data_dir = output_dir)
@@ -174,9 +175,10 @@ if __name__ == '__main__':
     
     # Optional arguments
     optional.add_argument('-o', '--output_dir', type = str, metavar = 'PATH', default = os.getcwd(), help = "Specify an output directory. Defaults to the present working directory.")
+    optional.add_argument('-d', '--direction', type = str, metavar = 'DIRECTION', default = '*', help = "Specify <ASCENDING> or <DESCENDING> if only a single orbital direction should be downloaded. Defaults to downloading both.")
     
     # Get arguments from command line
     args = parser.parse_args()
     
     # Run through entire processing sequence
-    main(args.user, args.password, args.search_area, args.start, args.end, output_dir = args.output_dir,)
+    main(args.user, args.password, args.search_area, args.start, args.end, output_dir = args.output_dir, direction = args.direction)
