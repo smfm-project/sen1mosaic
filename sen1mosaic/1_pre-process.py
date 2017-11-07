@@ -40,10 +40,11 @@ def _getMetaData(infile):
     
     md = {}
     
-    md['starttime'] = int(infile.split('/')[-1].split('_')[4].split('T')[-1])
-    md['endtime'] = int(infile.split('/')[-1].split('_')[5].split('T')[-1])
-    md['orbit'] = str(infile.split('/')[-1].split('_')[6])
-    md['datatake'] = str(infile.split('/')[-1].split('_')[7])
+    md['date'] = infile.split('/')[-1].split('_')[4].split('T')[0]
+    md['starttime'] = infile.split('/')[-1].split('_')[4].split('T')[-1]
+    md['endtime'] = infile.split('/')[-1].split('_')[5].split('T')[-1]
+    md['orbit'] = infile.split('/')[-1].split('_')[6]
+    md['datatake'] = infile.split('/')[-1].split('_')[7]
     
     return md
 
@@ -105,7 +106,6 @@ def splitFiles(infiles, n):
     return infiles_split
 
 
-
 def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), remove = True):
     '''
     A function to pre-process one or more Sentinel-1 IW GRD images in preparation for mosaicking with the SNAP Graph Processing Tool. Images are processed in three steps: 1) Calibration, 2) Reassembly into a single image (if >1 image used from an overpass), and 3) Geometric correction.
@@ -128,7 +128,7 @@ def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), remo
     md_start = _getMetaData(infiles[0])
     md_end = _getMetaData(infiles[-1])
     
-    output_file = output_dir + 'S1_gamma0_%s_%s_%s_%s'%(str(md_start['starttime']),str(md_end['endtime']),md_start['orbit'], md_start['datatake'])
+    output_file = output_dir + 'S1_processed_%s_%s_%s_%s_%s'%(md_start['date'],md_start['starttime'],md_end['endtime'],md_start['orbit'], md_start['datatake'])
     
     # Step 1: Run calibration SNAP processing chain
     preprocess_files = []
@@ -172,7 +172,27 @@ def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), remo
     return output_file
 
 
-
+def main(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), max_scenes = 3):
+    '''
+    '''
+    
+    # Convert arguments to absolute paths    
+    infiles = np.array(sorted([os.path.abspath(i) for i in infiles])) # Also sort, and convert to an array.
+    output_dir = os.path.abspath(output_dir)
+    temp_dir = os.path.abspath(temp_dir)
+    
+    # Determine which images should be processed together as one contiguous overpass
+    group = getContiguousImages(infiles)
+    
+    # Process one group at a time
+    for this_group in np.unique(group):
+        
+        infiles_split = splitFiles(infiles[group == this_group], max_scenes)
+        
+        for input_files in infiles_split:
+        
+            output_file = processFiles(input_files, output_dir = output_dir, temp_dir = temp_dir)
+    
 
 
 if __name__ == '__main__':
@@ -193,25 +213,14 @@ if __name__ == '__main__':
     # Optional arguments
     optional.add_argument('-o', '--output_dir', type=str, default = os.getcwd(), help="Optionally specify an output directory or file. If nothing specified, we'll apply a standard filename and output to the present working directory.")
     optional.add_argument('-t', '--temp_dir', type=str, default = os.getcwd(), help="Optionally specify a temporary output directory. If nothing specified, we'll output intermediate files to the present working directory.")
-    optional.add_argument('-m', '--max_scenes', type=str, default = 4, help="Optionally specify a maximum number of scenes to stitch in one go. If nothing specified, we'll set this to a default of 3 scenes.")
+    optional.add_argument('-m', '--max_scenes', type=str, default = 3, help="Optionally specify a maximum number of scenes to stitch in one go. If nothing specified, we'll set this to a default of 3 scenes.")
 
     # Parse command line arguments    
     args = parser.parse_args()
-        
-    # Convert arguments to absolute paths    
-    args.infiles = np.array(sorted([os.path.abspath(i) for i in args.infiles]))
-    args.output_dir = os.path.abspath(args.output_dir)
-           
-    # Determine which images should be processed together as one contiguous overpass
-    group = getContiguousImages(args.infiles)
     
-    # Process one group at a time
-    for this_group in np.unique(group):
+    # Execute module
+    main(args.infiles, output_dir = args.output_dir, temp_dir = args.temp_dir, max_scenes = args.max_scenes)
         
-        infiles_split = splitFiles(args.infiles[group == this_group], args.max_scenes)
-        
-        for input_files in infiles_split:
-        
-            output_file = processFiles(input_files, output_dir = args.output_dir, temp_dir = args.temp_dir)
+
         
 
