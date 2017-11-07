@@ -143,6 +143,8 @@ def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), remo
         
         # Execute Graph Processing Tool
         preprocess(infile, outfile)
+        
+        outfile += '.dim' # preprocess should not have .dim following file, but correction requires it so add it here
     
     # Step 2: Where more than one image, they need to be reassmbled into a single image    
     if len(preprocess_files) > 1: 
