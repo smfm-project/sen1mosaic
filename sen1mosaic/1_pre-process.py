@@ -213,7 +213,7 @@ if __name__ == '__main__':
     # Optional arguments
     optional.add_argument('-o', '--output_dir', type=str, default = os.getcwd(), help="Optionally specify an output directory or file. If nothing specified, we'll apply a standard filename and output to the present working directory.")
     optional.add_argument('-t', '--temp_dir', type=str, default = os.getcwd(), help="Optionally specify a temporary output directory. If nothing specified, we'll output intermediate files to the present working directory.")
-    optional.add_argument('-m', '--max_scenes', type=str, default = 3, help="Optionally specify a maximum number of scenes to stitch in one go. If nothing specified, we'll set this to a default of 3 scenes.")
+    optional.add_argument('-m', '--max_scenes', type=int, default = 3, help="Optionally specify a maximum number of scenes to stitch in one go. If nothing specified, we'll set this to a default of 3 scenes.")
 
     # Parse command line arguments    
     args = parser.parse_args()
