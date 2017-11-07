@@ -87,21 +87,21 @@ def getContiguousImages(infiles):
     return group
 
 
-def splitFiles(infiles, n):
+def splitFiles(infiles, max_scenes):
     '''
     Split a 1-d numpy array into overlapping segments of size n. The purpose of this function is to prevent very long chains of Sentinel-1 data being processed together and crashing SNAP. Based on solution in https://stackoverflow.com/questions/36586897/splitting-a-python-list-into-a-list-of-overlapping-chunks.
     
     Args:
         infiles: A numpy array of Sentinel-1 file paths.
-        n: Number of files per segment.
+        max_scenes: Number of files per segment.
     
     Returns:
-        A list of arrays split into segments of size n.
+        A list of arrays split into segments of size max_scenes.
     '''
-    n = 3  # group size
-    m = 1  # overlap size
     
-    infiles_split = [infiles[i:i+n-m+1] for i in xrange(0,infiles.shape[0], n-m)]
+    overlap = 1  # overlap size
+    
+    infiles_split = [infiles[i:i + max_scenes - overlap + 1] for i in xrange(0,infiles.shape[0], max_scenes - overlap)]
     
     return infiles_split
 
