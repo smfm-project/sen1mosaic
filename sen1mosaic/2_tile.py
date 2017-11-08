@@ -145,11 +145,11 @@ def _testOutsideTile(md_source, md_dest):
         A boolean (True/False) value.
     '''
     
-    import osr
+    from osgeo import osr
             
     # Set up function to translate coordinates from source to destination
     tx = osr.CoordinateTransformation(md_source['proj'], md_dest['proj'])
-         
+    
     # And translate the source coordinates
     md_source['ulx'], md_source['uly'], z = tx.TransformPoint(md_source['ulx'], md_source['uly'])
     md_source['lrx'], md_source['lry'], z = tx.TransformPoint(md_source['lrx'], md_source['lry'])   
@@ -313,9 +313,7 @@ def getFilesInTile(source_files, md_dest):
         
         # Define source file metadata dictionary
         md_source = buildMetadataDictionary(extent_source, res, EPSG_source)
-        
-        print 'Checking %s'%S1_file
-        
+                
         # Skip processing the file if image falls outside of tile area
         if _testOutsideTile(md_source, md_dest):
             do_tile.append(False)
