@@ -313,7 +313,9 @@ def getFilesInTile(source_files, md_dest):
         
         # Define source file metadata dictionary
         md_source = buildMetadataDictionary(extent_source, res, EPSG_source)
-
+        
+        print 'Checking %s'%S1_file
+        
         # Skip processing the file if image falls outside of tile area
         if _testOutsideTile(md_source, md_dest):
             do_tile.append(False)
