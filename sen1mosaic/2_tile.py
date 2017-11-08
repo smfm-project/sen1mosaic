@@ -58,6 +58,8 @@ def _loadSourceFile(S1_file, pol):
         A numpy array.
     '''
     
+    from osgeo import gdal
+    
     # Remove trailing slash from input filename, if it exists
     S1_file = S1_file.rstrip('/')
     
@@ -69,23 +71,6 @@ def _loadSourceFile(S1_file, pol):
     
     return data
 
-
-def _improveSCLMask(data, res):
-    '''
-    The median filter of sen2Three can mess up edges of image. This can be fixed by removing 60 m worth of pixels from the edge of the mask with this function.
-    
-    Args:
-        data: Input SCL mask as a numpy array.
-        res: Resolution of mask, an integer of 10, 20, or 60 meters.
-    
-    Returns:
-        A numpy array with a slightly modified mask.    
-    '''
-    
-    mask_dilate = ndimage.morphology.binary_dilation((data == 0).astype(np.int), iterations = 120 / res)
-    data[mask_dilate] = 0
-    
-    return data
 
 
 def _createGdalDataset(md, data_out = None, filename = '', driver = 'MEM', dtype = 3, options = []):
@@ -177,32 +162,7 @@ def _testOutsideTile(md_source, md_dest):
     return out_of_tile
 
 
-def _updateMaskArrays(scl_out, scl_resampled, image_n, n):
-    '''
-    Function to update contents of scl and image_n arrays.
-    
-    Args:
-        scl_out: A numpy array representing the mask to be output.
-        scl_resampled: A numpy array containing resampled data to be added to the scl_out.
-        image_n: A numpy array to record the image number for each pixel.
-        n: An integer describing the image number (first image = 1, second image = 2 etc.)
-    
-    Returns:
-        The scl_out array with pixels from scl_resampled added.
-        The image_n array describing which image each pixel is sources from.
-    '''
-    
-    # Select only places which have new data, and have not already had data allocated
-    selection = np.logical_and(image_n == 0, scl_resampled != 0)
-    
-    # Update SCL code in each newly assigned pixel, and record the image that pixel has come from
-    scl_out[selection] = scl_resampled[selection]
-    image_n[selection] = n
-    
-    return scl_out, image_n
-
-
-def _updateBandArray(data_out, data_resampled, action = 'sum'):
+def _updateDataArray(data_out, data_resampled, action = 'sum'):
     '''
     Function to update contents of output array based on image_n array.
     
@@ -369,7 +329,7 @@ def getFilesInTile(source_files, md_dest):
 
 
 
-def generateBandArray(source_files, pol, md_dest, output_dir = os.getcwd(), output_name = 'S1_output'):
+def generateDataArray(source_files, pol, md_dest, output_dir = os.getcwd(), output_name = 'S1_output'):
     """
     
     Function which generates an output GeoTiff file from list of pre-processed S1 source files for a specified output polarisation and extent.
@@ -407,8 +367,8 @@ def generateBandArray(source_files, pol, md_dest, output_dir = os.getcwd(), outp
         # Update output arrays if we're finished with a previous overpass
         if n != 0:
             if date != last_date:
-                data_out = _updateBandArray(data_out, data_date, action = 'sum')
-                n_images = _updateBandArray(n_images, data_date != 0, action = 'sum')
+                data_out = _updateDataArray(data_out, data_date, action = 'sum')
+                n_images = _updateDataArray(n_images, data_date != 0, action = 'sum')
 
         # Update date for next loop
         last_date = date
@@ -426,15 +386,15 @@ def generateBandArray(source_files, pol, md_dest, output_dir = os.getcwd(), outp
         data_resampled = _reprojectImage(ds_source, ds_dest, md_source, md_dest)
         
         # Update array for this date
-        data_date = _updateBandArray(data_date, data_resampled, action = 'max')
+        data_date = _updateDataArray(data_date, data_resampled, action = 'max')
         
         # Tidy up
         ds_source = None
         ds_dest = None
    
     # Update output arrays on final loop
-    data_out = _updateBandArray(data_out, data_date, action = 'sum')
-    n_images = _updateBandArray(n_images, data_date != 0, action = 'sum')
+    data_out = _updateDataArray(data_out, data_date, action = 'sum')
+    n_images = _updateDataArray(n_images, data_date != 0, action = 'sum')
     
     # Get rid of zeros in cases of no data
     n_images[n_images==0] = 1 
@@ -530,7 +490,7 @@ def main(source_files, extent_dest, EPSG_dest, output_res = 10,
         print 'Doing polarisation %s'%pol
         
         # Using image_n, combine pixels into outputs images for each band
-        band_out = generateBandArray(source_files_tile, pol, md_dest, output_dir = output_dir, output_name = output_name)
+        band_out = generateDataArray(source_files_tile, pol, md_dest, output_dir = output_dir, output_name = output_name)
     
     # Build VRT output files for straightforward visualisation
     print 'Building .VRT images for visualisation'
