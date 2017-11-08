@@ -202,7 +202,7 @@ def _updateMaskArrays(scl_out, scl_resampled, image_n, n):
     return scl_out, image_n
 
 
-def _updateBandArray(data_out, data_resampled, image_n, n, scl_out):
+def _updateBandArray(data_out, data_resampled, action = 'sum'):
     '''
     Function to update contents of output array based on image_n array.
     
@@ -218,15 +218,13 @@ def _updateBandArray(data_out, data_resampled, image_n, n, scl_out):
         
     '''
     
-    # Find pixels that need replacing in this image
-    selection = image_n == n
-               
-    # Add good data to data_out array
-    data_out[selection] = data_resampled[selection]
-               
-    # Set bad values from scl mask to 0, to keep things tidy
-    for i in [1, 2, 3, 8, 9, 10, 11, 12]:
-        data_out[selection][scl_out[selection] == i] = 0
+    # Add good data to data_out array   
+    if action == 'sum':
+        data_out += data_resampled
+    elif action == 'max':
+        data_out[data_resampled > data_out] = data_resampled[data_resampled > data_out]
+    else:
+        print 'ERROR in update band array action selection,'
 
     return data_out
 
@@ -242,7 +240,7 @@ def getSourceMetadata(S1_file):
         EPSG code of the coordinate reference system of the file.
     '''
     
-    from osgeo import osr
+    from osgeo import gdal, osr
              
     # Remove trailing / from safe files if present 
     S1_file = S1_file.rstrip('/')
@@ -272,10 +270,10 @@ def getSourceMetadata(S1_file):
     srs.AutoIdentifyEPSG()
     EPSG = int(srs.GetAttrValue("AUTHORITY", 1))
     
-    #TODO
-    # date = from filename
+    # Extract date string from filename
+    date = S1_file.split('/')[-1].split('_')[-5]
     
-    return extent, EPSG
+    return extent, EPSG, date
 
 
 def buildMetadataDictionary(extent_dest, res, EPSG):
@@ -351,7 +349,7 @@ def getFilesInTile(source_files, md_dest):
     for S1_file in source_files:
                                            
         # Get source file metadata
-        extent_source, EPSG_source = getSourceMetadata(S1_file)
+        extent_source, EPSG_source, date = getSourceMetadata(S1_file)
         
         # Define source file metadata dictionary
         md_source = buildMetadataDictionary(extent_source, res, EPSG_source)
@@ -388,22 +386,33 @@ def generateBandArray(source_files, pol, md_dest, output_dir = os.getcwd(), outp
     """
     
     # Create array to contain output array for this band
-    data_out = _createOutputArray(md_dest, dtype = np.uint16)
-
+    data_out = _createOutputArray(md_dest, dtype = np.float32) # To add output data to
+    n_images = _createOutputArray(md_dest, dtype = np.int16) # To track number of images for calculating mean
+    data_date = _createOutputArray(md_dest, dtype = np.float32) # To add new data for each date (taking max value forward)
+    
     # Extract this image's resolution from md_dest
     res = md_dest['res']
-    
+        
     # For each source file
     for n, source_file in enumerate(source_files):
-        
+                
         print '    Adding pixels from %s'%source_file.split('/')[-1]
         
         # Get source file metadata
-        extent_source, EPSG_source = getSourceMetadata(source_file)
-     
+        extent_source, EPSG_source, date = getSourceMetadata(source_file)
+                
         # Define source file metadata dictionary
         md_source = buildMetadataDictionary(extent_source, res, EPSG_source)
+        
+        # Update output arrays if we're finished with a previous overpass
+        if n != 0:
+            if date != last_date:
+                data_out = _updateBandArray(data_out, data_date, action = 'sum')
+                n_images = _updateBandArray(n_images, data_date != 0, action = 'sum')
 
+        # Update date for next loop
+        last_date = date
+        
         # Load source data for the band
         data = _loadSourceFile(source_file, pol)
         
@@ -416,20 +425,28 @@ def generateBandArray(source_files, pol, md_dest, output_dir = os.getcwd(), outp
         # Reproject source to destination projection and extent
         data_resampled = _reprojectImage(ds_source, ds_dest, md_source, md_dest)
         
-        #WORKING TO THIS POINT
-        #TODO: Turn this into a function that allows only a single measurement from a given date
-        # Add reprojected data to band output array at appropriate image_n
-        data_out = _updateBandArray(data_out, data_resampled, image_n, n + 1, scl_out)
-                
+        # Update array for this date
+        data_date = _updateBandArray(data_date, data_resampled, action = 'max')
+        
         # Tidy up
         ds_source = None
         ds_dest = None
-
-    print 'Outputting band %s'%band
+   
+    # Update output arrays on final loop
+    data_out = _updateBandArray(data_out, data_date, action = 'sum')
+    n_images = _updateBandArray(n_images, data_date != 0, action = 'sum')
+    
+    # Get rid of zeros in cases of no data
+    n_images[n_images==0] = 1 
+    
+    # Change data_out to a mean
+    data_out = data_out / n_images
+    
+    print 'Outputting polarisation %s'%pol
 
     # Write output for this band to disk
     ds_out = _createGdalDataset(md_dest, data_out = data_out,
-                               filename = '%s/%s_%s_R%sm.tif'%(output_dir, output_name, band, str(res)),
+                               filename = '%s/%s_%s_R%sm.tif'%(output_dir, output_name, pol, str(res)),
                                driver='GTiff', dtype = 1, options = ['COMPRESS=LZW'])
 
     return data_out
@@ -480,7 +497,7 @@ def main(source_files, extent_dest, EPSG_dest, output_res = 10,
     
     # TEST SECTION #
     source_files = sorted(glob.glob('/home/sbowers3/DATA/S1_testdata/*.dim'))
-    extent_dest = [600000,8000000,700000,8100000]
+    extent_dest = [600000,7900000,700000,8100000]
     EPSG_dest = 32736
     output_res = 10
     pol_list = ['VV','VH']
@@ -512,17 +529,16 @@ def main(source_files, extent_dest, EPSG_dest, output_res = 10,
             
         print 'Doing polarisation %s'%pol
         
-        #WORKING TO THIS POINT
         # Using image_n, combine pixels into outputs images for each band
-        band_out = generateBandArray(source_files_tile, image_n, band, scl_out, md_dest, output_dir = output_dir, output_name = output_name)
-    
+        band_out = generateBandArray(source_files_tile, pol, md_dest, output_dir = output_dir, output_name = output_name)
     
     # Build VRT output files for straightforward visualisation
     print 'Building .VRT images for visualisation'
-
+    
+    # NOT IMPLEMENTED YET
     # False colour image (VV, VH, VV/VH)
-    buildVRT('%s/%s_B04_R10m.tif'%(output_dir, output_name), '%s/%s_B03_R10m.tif'%(output_dir, output_name),
-              '%s/%s_B02_R10m.tif'%(output_dir, output_name), '%s/%s_RGB.vrt'%(output_dir, output_name))
+    #buildVRT('%s/%s_B04_R10m.tif'%(output_dir, output_name), '%s/%s_B03_R10m.tif'%(output_dir, output_name),
+    #          '%s/%s_B02_R10m.tif'%(output_dir, output_name), '%s/%s_RGB.vrt'%(output_dir, output_name))
     
     
     print 'Processing complete!'
