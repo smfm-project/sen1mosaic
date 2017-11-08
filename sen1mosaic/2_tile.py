@@ -496,13 +496,13 @@ def main(source_files, extent_dest, EPSG_dest, output_res = 10,
     """
     
     # TEST SECTION #
-    source_files = sorted(glob.glob('/home/sbowers3/DATA/S1_testdata/*.dim'))
-    extent_dest = [600000,7900000,700000,8100000]
-    EPSG_dest = 32736
-    output_res = 10
-    pol_list = ['VV','VH']
-    output_dir = '/home/sbowers3/DATA/S1_testdata/'
-    output_name = 'S1_output'
+    #source_files = sorted(glob.glob('/home/sbowers3/DATA/S1_testdata/*.dim'))
+    #extent_dest = [600000,7900000,700000,8100000]
+    #EPSG_dest = 32736
+    #output_res = 10
+    #pol_list = ['VV','VH']
+    #output_dir = '/home/sbowers3/DATA/S1_testdata/'
+    #output_name = 'S1_output'
     # TEST SECTION #
 
     
