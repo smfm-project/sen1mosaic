@@ -91,7 +91,7 @@ def _createGdalDataset(md, data_out = None, filename = '', driver = 'MEM', dtype
     from osgeo import gdal
     
     gdal_driver = gdal.GetDriverByName(driver)
-    ds = gdal_driver.Create(filename, md['ncols'], md['nrows'], 1, gdal.GDT_Float32, options = options)
+    ds = gdal_driver.Create(filename, md['ncols'], md['nrows'], 1, dtype, options = options)
     ds.SetGeoTransform(md['geo_t'])
     ds.SetProjection(md['proj'].ExportToWkt())
     
@@ -368,7 +368,7 @@ def generateDataArray(source_files, pol, md_dest, output_dir = os.getcwd(), outp
         if n != 0:
             if date != last_date:
                 data_out = _updateDataArray(data_out, data_date, action = 'sum')
-                n_images = _updateDataArray(n_images, data_date != 0, action = 'sum')
+                n_images = _updateDataArray(n_images, (data_date != 0) * 1, action = 'sum')
 
         # Update date for next loop
         last_date = date
@@ -385,7 +385,7 @@ def generateDataArray(source_files, pol, md_dest, output_dir = os.getcwd(), outp
         # Reproject source to destination projection and extent
         data_resampled = _reprojectImage(ds_source, ds_dest, md_source, md_dest)
         
-        # Update array for this date
+        # Update array for this date (allowing only 1 measurement per date to be included in mean)
         data_date = _updateDataArray(data_date, data_resampled, action = 'max')
         
         # Tidy up
@@ -394,20 +394,20 @@ def generateDataArray(source_files, pol, md_dest, output_dir = os.getcwd(), outp
    
     # Update output arrays on final loop
     data_out = _updateDataArray(data_out, data_date, action = 'sum')
-    n_images = _updateDataArray(n_images, data_date != 0, action = 'sum')
+    n_images = _updateDataArray(n_images, (data_date != 0) * 1, action = 'sum')
     
     # Get rid of zeros in cases of no data
     n_images[n_images==0] = 1 
     
     # Change data_out to a mean
-    data_out = data_out / n_images
+    data_out = data_out / n_images.astype(np.float32)
     
     print 'Outputting polarisation %s'%pol
 
     # Write output for this band to disk
     ds_out = _createGdalDataset(md_dest, data_out = data_out,
-                               filename = '%s/%s_%s_R%sm.tif'%(output_dir, output_name, pol, str(res)),
-                               driver='GTiff', dtype = 1, options = ['COMPRESS=LZW'])
+                        filename = '%s/%s_%s_R%sm.tif'%(output_dir, output_name, pol, str(res)),
+                        driver='GTiff', dtype = 6, options = ['COMPRESS=LZW'])
 
     return data_out
 
