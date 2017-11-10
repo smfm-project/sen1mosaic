@@ -11,13 +11,13 @@
   <node id="Speckle-Filter">
     <operator>Speckle-Filter</operator>
     <sources>
-      <sourceProduct refid="Read"/>
+      <sourceProduct refid="Terrain-Flattening"/>
     </sources>
     <parameters class="com.bc.ceres.binding.dom.XppDomElement">
       <sourceBands/>
       <filter>Gamma Map</filter>
-      <filterSizeX>5</filterSizeX>
-      <filterSizeY>5</filterSizeY>
+      <filterSizeX>7</filterSizeX>
+      <filterSizeY>7</filterSizeY>
       <dampingFactor>2</dampingFactor>
       <estimateENL>true</estimateENL>
       <enl>1.0</enl>

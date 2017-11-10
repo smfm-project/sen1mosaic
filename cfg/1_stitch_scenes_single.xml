@@ -8,7 +8,6 @@
       <formatName>BEAM-DIMAP</formatName>
     </parameters>
   </node>
-  </node>
   <node id="Multilook">
     <operator>Multilook</operator>
     <sources>

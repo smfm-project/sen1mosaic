@@ -9,7 +9,7 @@ import sys
 import uuid
 
 
-def preprocess(infile, outfile, xmlfile = os.path.join(os.path.dirname(__file__), '../cfg/0_calibrate.xml')):
+def preprocess(infile, outfile, xmlfile = os.path.join(os.path.dirname(__file__), '../cfg/0_calibrate_short.xml')):
     
     os.system('~/snap/bin/gpt %s -x -Pinputfile=%s -Poutputfile=%s'\
       %(xmlfile,infile,outfile)) # -c 16384M #-c 32768M -q 16
@@ -27,7 +27,7 @@ def stitching_single(infile, outfile, xmlfile = os.path.join(os.path.dirname(__f
       %(xmlfile,infile,outfile)) # -c 16384M # -c 32768M -q 16
 
 
-def correction(infile, outfile, xmlfile = os.path.join(os.path.dirname(__file__), '../cfg/2_terrain_correction.xml')):
+def correction(infile, outfile, xmlfile = os.path.join(os.path.dirname(__file__), '../cfg/2_terrain_correction_short.xml')):
     
     os.system('~/snap/bin/gpt %s -x -Pinputfile=%s -Poutputfile=%s'\
       %(xmlfile,infile,outfile)) # -c 16384M # -c 32768M -q 16
@@ -115,7 +115,6 @@ def splitFiles(infiles, max_scenes):
     if len(infiles_split) > 1 and len(infiles_split[-1]) == 1:
         infiles_split = infiles_split[:-1]
                                          
-    
     return infiles_split
 
 
@@ -168,7 +167,7 @@ def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), remo
         infiles_formatted = ".dim,".join(preprocess_files) + ".dim"
             
         # Select graph that first reassembles multiple images
-        outfile = preprocess_files[-1] + '_MTL_%sT.dim'%str(len(preprocess_files))
+        outfile = preprocess_files[-1] + '_mtl_%st.dim'%str(len(preprocess_files))
         
         print 'Multilooking and stitching %s'%infiles_formatted
         
