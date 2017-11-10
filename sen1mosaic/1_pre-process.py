@@ -21,7 +21,13 @@ def stitching(infiles, outfile, xmlfile = os.path.join(os.path.dirname(__file__)
       %(xmlfile,infiles,outfile)) # -c 16384M # -c 32768M -q 16
 
 
-def correction(infile, outfile, xmlfile = os.path.join(os.path.dirname(__file__), '../cfg/2_terrain_correction_short.xml')):
+def stitching_single(infile, outfile, xmlfile = os.path.join(os.path.dirname(__file__), '../cfg/1_stitch_scenes_single.xml')):
+    
+    os.system('~/snap/bin/gpt %s -x -Pinputfile=%s -Poutputfile=%s'\
+      %(xmlfile,infile,outfile)) # -c 16384M # -c 32768M -q 16
+
+
+def correction(infile, outfile, xmlfile = os.path.join(os.path.dirname(__file__), '../cfg/2_terrain_correction.xml')):
     
     os.system('~/snap/bin/gpt %s -x -Pinputfile=%s -Poutputfile=%s'\
       %(xmlfile,infile,outfile)) # -c 16384M # -c 32768M -q 16
@@ -141,6 +147,8 @@ def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), remo
         # Keep a record of which files have already been processed for each pass
         preprocess_files.append(outfile) 
         
+        print 'Pre-processing %s'%infile
+        
         # Execute Graph Processing Tool
         preprocess(infile, outfile)
         
@@ -153,10 +161,26 @@ def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), remo
         infiles_formatted = ".dim,".join(preprocess_files) + ".dim"
             
         # Select graph that first reassembles multiple images
-        outfile = preprocess_files[0][:-4] + '_stitch.dim'
+        outfile = preprocess_files[-1][:-4] + '_stitch.dim'
+        
+        print 'Multilooking and stitching %s'%infiles_formatted
         
         # Execute Graph Processing Tool
         stitching(infiles_formatted, outfile)
+    
+    else:
+        # For case where only one file is input
+        infile = preprocess_file[0] + '.dim'
+        
+        outfile = preprocess_files[0][:-4] + '_stitch.dim'
+        
+        print 'Multilooking %s'%infiles
+        
+        # Execute Graph Processing Tool
+        stitching_single(infile, outfile)
+    
+    
+    print 'Geometrically correcting %s'%outfile # outfile = latest file
     
     # Step 3: Perform geometric correction
     correction(outfile, output_file)
@@ -166,10 +190,9 @@ def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), remo
         for this_file in preprocess_files:
             os.system('rm %s.dim'%this_file)
             os.system('rm -r %s.data'%this_file)
-                
-        if len(preprocess_files)>1:
-            os.system('rm %s'%outfile)
-            os.system('rm -r %s.data'%outfile[:-4])
+              
+        os.system('rm %s'%outfile)
+        os.system('rm -r %s.data'%outfile[:-4])
     
     return output_file
 
