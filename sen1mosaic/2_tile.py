@@ -377,7 +377,7 @@ def generateDataArray(source_files, pol, md_dest, output_dir = os.getcwd(), outp
         data = _loadSourceFile(source_file, pol)
         
         # Write array to a gdal dataset
-        ds_source = _createGdalDataset(md_source, data_out = data)                
+        ds_source = _createGdalDataset(md_source, dtype = 6, data_out = data)                
 
         # Create an empty gdal dataset for destination
         ds_dest = _createGdalDataset(md_dest, dtype = 6)
