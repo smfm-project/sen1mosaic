@@ -105,9 +105,16 @@ def splitFiles(infiles, max_scenes):
         A list of arrays split into segments of size max_scenes.
     '''
     
-    overlap = 1  # overlap size
+    assert max_scenes > 1, "max_scenes must be > 1, else there won't be multiple scenes for the stiching algorithm"
     
-    infiles_split = [infiles[i:i + max_scenes - overlap + 1] for i in xrange(0,infiles.shape[0], max_scenes - overlap)]
+    overlap = 1  # overlap size
+        
+    infiles_split = [infiles[i:i+max_scenes] for i in xrange(0,infiles.shape[0], max_scenes - overlap)]
+    
+    # This catches case where only one overlapping file is included
+    if len(infiles_split) > 1 and len(infiles_split[-1]) == 1:
+        infiles_split = infiles_split[:-1]
+                                         
     
     return infiles_split
 
@@ -161,7 +168,7 @@ def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), remo
         infiles_formatted = ".dim,".join(preprocess_files) + ".dim"
             
         # Select graph that first reassembles multiple images
-        outfile = preprocess_files[-1][:-4] + '_stitch.dim'
+        outfile = preprocess_files[-1] + '_MTL_%sT.dim'%str(len(preprocess_files))
         
         print 'Multilooking and stitching %s'%infiles_formatted
         
@@ -170,11 +177,11 @@ def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), remo
     
     else:
         # For case where only one file is input
-        infile = preprocess_file[0] + '.dim'
+        infile = preprocess_files[0] + '.dim'
         
-        outfile = preprocess_files[0][:-4] + '_stitch.dim'
+        outfile = preprocess_files[0] + '_MTL_1T.dim'
         
-        print 'Multilooking %s'%infiles
+        print 'Multilooking %s'%infiles[0]
         
         # Execute Graph Processing Tool
         stitching_single(infile, outfile)
