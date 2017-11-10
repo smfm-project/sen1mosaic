@@ -380,7 +380,7 @@ def generateDataArray(source_files, pol, md_dest, output_dir = os.getcwd(), outp
         ds_source = _createGdalDataset(md_source, data_out = data)                
 
         # Create an empty gdal dataset for destination
-        ds_dest = _createGdalDataset(md_dest, dtype = 1)
+        ds_dest = _createGdalDataset(md_dest, dtype = 6)
                 
         # Reproject source to destination projection and extent
         data_resampled = _reprojectImage(ds_source, ds_dest, md_source, md_dest)
