@@ -242,7 +242,7 @@ def buildMetadataDictionary(extent_dest, res, EPSG):
     
     Args:
         extent_dest: List desciribing corner coordinate points in destination CRS [xmin, ymin, xmax, ymax]
-        res: Integer describing pixel size in m (10, 20, or 60)
+        res: Integer describing pixel size in m
         EPSG: EPSG code of destination coordinate reference system. Must be a UTM projection. See: https://www.epsg-registry.org/ for codes.
     
     Returns:
@@ -522,6 +522,7 @@ if __name__ == "__main__":
     # Optional arguments
     optional.add_argument('-o', '--output_dir', type=str, metavar = 'DIR', default = os.getcwd(), help="Optionally specify an output directory. If nothing specified, downloads will output to the present working directory, given a standard filename.")
     optional.add_argument('-n', '--output_name', type=str, metavar = 'NAME', default = 'S1_output', help="Optionally specify a string to precede output filename.")
+    optional.add_argument('-r', '--resolution', type=str, metavar = 'RES', default = 10, help="Optionally specify an output resolution in metres. Defaults to 10 m.")
 
     # Get arguments
     args = parser.parse_args()
@@ -529,6 +530,6 @@ if __name__ == "__main__":
     # Get absolute path of input .safe files.
     args.infiles = [os.path.abspath(i) for i in args.infiles]
 
-    main(args.infiles, args.target_extent, args.epsg, output_dir = args.output_dir, output_name = args.output_name)
+    main(args.infiles, args.target_extent, args.epsg, output_dir = args.output_dir, output_name = args.output_name, output_res = args.resolution)
     
     
