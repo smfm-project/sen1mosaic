@@ -7,6 +7,7 @@ import numpy as np
 import os
 from scipy import ndimage
 import subprocess
+import pdb
 
 try:
     import xml.etree.cElementTree as ET
@@ -222,8 +223,9 @@ def getSourceMetadata(S1_file):
     yres = geo_t[5]
     lrx = ulx + (xres * ncols)
     lry = uly + (yres * nrows)
-    
     extent = [ulx, lry, lrx, uly]
+    
+    res = abs(xres)
     
     # Find EPSG code to define projection
     srs = osr.SpatialReference(wkt=ds.GetProjection())
@@ -233,7 +235,7 @@ def getSourceMetadata(S1_file):
     # Extract date string from filename
     date = S1_file.split('/')[-1].split('_')[-5]
     
-    return extent, EPSG, date
+    return extent, res, EPSG, date
 
 
 def buildMetadataDictionary(extent_dest, res, EPSG):
@@ -299,7 +301,7 @@ def getFilesInTile(source_files, md_dest):
     source_files = _sortSourceFiles(source_files)
     
     # Extract this image's resolution from md_dest
-    res = md_dest['res']
+    #res = md_dest['res']
                 
     # Determine which L3A images are within specified tile bounds
     print 'Searching for source files within specified tile...'
@@ -309,7 +311,7 @@ def getFilesInTile(source_files, md_dest):
     for S1_file in source_files:
                                            
         # Get source file metadata
-        extent_source, EPSG_source, date = getSourceMetadata(S1_file)
+        extent_source, res, EPSG_source, date = getSourceMetadata(S1_file)
         
         # Define source file metadata dictionary
         md_source = buildMetadataDictionary(extent_source, res, EPSG_source)
@@ -351,15 +353,17 @@ def generateDataArray(source_files, pol, md_dest, output_dir = os.getcwd(), outp
     data_date = _createOutputArray(md_dest, dtype = np.float32) # To add new data for each date (taking max value forward)
     
     # Extract this image's resolution from md_dest
-    res = md_dest['res']
+    #res = md_dest['res']
         
     # For each source file
     for n, source_file in enumerate(source_files):
-                
+        
         print '    Adding pixels from %s'%source_file.split('/')[-1]
         
+        #pdb.set_trace()
+        
         # Get source file metadata
-        extent_source, EPSG_source, date = getSourceMetadata(source_file)
+        extent_source, res, EPSG_source, date = getSourceMetadata(source_file)
                 
         # Define source file metadata dictionary
         md_source = buildMetadataDictionary(extent_source, res, EPSG_source)
@@ -406,7 +410,7 @@ def generateDataArray(source_files, pol, md_dest, output_dir = os.getcwd(), outp
 
     # Write output for this band to disk
     ds_out = _createGdalDataset(md_dest, data_out = data_out,
-                        filename = '%s/%s_%s_R%sm.tif'%(output_dir, output_name, pol, str(res)),
+                        filename = '%s/%s_%s_R%sm.tif'%(output_dir, output_name, pol, str(md_dest['res'])),
                         driver='GTiff', dtype = 6, options = ['COMPRESS=LZW'])
 
     return data_out
