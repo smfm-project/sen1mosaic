@@ -359,9 +359,7 @@ def generateDataArray(source_files, pol, md_dest, output_dir = os.getcwd(), outp
     for n, source_file in enumerate(source_files):
         
         print '    Adding pixels from %s'%source_file.split('/')[-1]
-        
-        pdb.set_trace()
-        
+               
         # Get source file metadata
         extent_source, res, EPSG_source, date = getSourceMetadata(source_file)
                 
