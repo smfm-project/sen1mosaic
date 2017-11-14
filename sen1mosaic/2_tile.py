@@ -276,8 +276,8 @@ def buildMetadataDictionary(extent_dest, res, EPSG):
     md['res'] = res
     
     # Calculate array size
-    md['nrows'] = int((md['lry'] - md['uly']) / md['yres'])
-    md['ncols'] = int((md['lrx'] - md['ulx']) / md['xres'])
+    md['nrows'] = int(round((md['lry'] - md['uly']) / md['yres']))
+    md['ncols'] = int(round((md['lrx'] - md['ulx']) / md['xres']))
     
     # Define gdal geotransform (Affine)
     md['geo_t'] = (md['ulx'], md['xres'], 0, md['uly'], 0, md['yres'])
@@ -360,7 +360,7 @@ def generateDataArray(source_files, pol, md_dest, output_dir = os.getcwd(), outp
         
         print '    Adding pixels from %s'%source_file.split('/')[-1]
         
-        #pdb.set_trace()
+        pdb.set_trace()
         
         # Get source file metadata
         extent_source, res, EPSG_source, date = getSourceMetadata(source_file)
