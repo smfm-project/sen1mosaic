@@ -190,12 +190,13 @@ def _updateDataArray(data_out, data_resampled, action = 'sum'):
     return data_out
 
 
-def getSourceMetadata(S1_file):
+def getSourceMetadata(S1_file, pol = 'VV'):
     '''
     Function to extract georefence info from 
     
     Args:
-        S1_file:
+        S1_file: 
+        pol: Polarisation of an input file to extract metadata from. Defaults to 'VV'.
     Returns:
         A list describing the extent of the file, in the format [xmin, ymin, xmax, ymax].
         EPSG code of the coordinate reference system of the file.
@@ -207,7 +208,7 @@ def getSourceMetadata(S1_file):
     S1_file = S1_file.rstrip('/')
     
     # Find the xml file that contains file metadata
-    input_file = glob.glob(S1_file[:-4] + '.data/*_VV.img')[0]
+    input_file = glob.glob(S1_file[:-4] + '.data/*_%s.img'%pol)[0]
         
     ds = gdal.Open(input_file,0)
     geo_t = ds.GetGeoTransform()
@@ -345,6 +346,7 @@ def generateDataArray(source_files, pol, md_dest, output_dir = os.getcwd(), outp
         
     Returns:
         A numpy array containing mosaic data for the input band.
+        A string of the filename it's saved to.
     """
     
     # Create array to contain output array for this band
@@ -405,15 +407,56 @@ def generateDataArray(source_files, pol, md_dest, output_dir = os.getcwd(), outp
     data_out = data_out / n_images.astype(np.float32)
     
     print 'Outputting polarisation %s'%pol
-
+    
+    filename = '%s/%s_%s_R%sm.tif'%(output_dir, output_name, pol, str(md_dest['res']))
+    
     # Write output for this band to disk
     ds_out = _createGdalDataset(md_dest, data_out = data_out,
-                        filename = '%s/%s_%s_R%sm.tif'%(output_dir, output_name, pol, str(md_dest['res'])),
+                        filename = filename,
                         driver='GTiff', dtype = 6, options = ['COMPRESS=LZW'])
 
-    return data_out
+    return data_out, filename
 
 
+def buildVVVH(VV_file, VH_file, output_dir = os.getcwd(), output_name = 'S1_output'):
+    '''
+    '''
+
+    from osgeo import gdal
+    
+              
+    ds_VV = gdal.Open(VV_file,0)
+    ds_VH = gdal.Open(VH_file,0)
+    
+    data_VV = ds_VV.ReadAsArray()
+    data_VH = ds_VH.ReadAsArray()
+    
+    mask = np.logical_or(data_VV <= 0., data_VH <= 0.)
+    
+    data_VV[data_VV<=0] = 0.00001
+    data_VH[data_VH<=0] = 0.00001
+
+    VV_VH = data_VV / data_VH
+    
+    VV_VH[mask] = 0.
+        
+    # Output
+    res = str(int(round(ds_VV.GetGeoTransform()[1])))
+    filename = '%s/%s_VVVH_R%sm.tif'%(output_dir, output_name, res)
+    
+    gdal_driver = gdal.GetDriverByName('GTiff')
+    ds = gdal_driver.Create(filename, ds_VV.RasterYSize, ds_VV.RasterXSize, 1, 6, options = ['COMPRESS=LZW'])
+    ds.SetGeoTransform(ds_VV.GetGeoTransform())
+    ds.SetProjection(ds_VV.GetProjection())
+        
+    ds.GetRasterBand(1).WriteArray(VV_VH)
+    
+    # And write
+    ds = None
+        
+    return filename
+
+    
 def buildVRT(red_band, green_band, blue_band, output_path):
     """
     Builds a three band RGB vrt for image visualisation. Outputs a .VRT file.
@@ -451,23 +494,12 @@ def main(source_files, extent_dest, EPSG_dest, output_res = 10,
         source_files: A list of level 3A input files.
         extent_dest: List desciribing corner coordinate points in destination CRS [xmin, ymin, xmax, ymax].
         EPSG_dest: EPSG code of destination coordinate reference system. Must be a UTM projection. See: https://www.epsg-registry.org/ for codes.
-        res_list: Optionally specify a list of integers describing pixel size in m (10, 20, or 60). Must be accompanied by a band_list of the same size. Defaults to native resolution of each band.
-        band_list: Optionally specify a list of output band names. Must be accompanied by a res_list of the same size. Defaults to processing all 10 and 20 m bands.
+        output_res: Optionally specify a value for pixel size in m. Defaults to 10 m.
+        pol_list: Optionally specify a list containing desired polarisations (e.g. ['VV'], or ['VV','VH'].). Defaults to ['VV','VH'].
         output_dir: Optionally specify an output directory.
-        output_name: Optionally specify a string to precede output file names.
+        output_name: Optionally specify a string to precede output file names. Defaults to 'S1_output'
     """
-    
-    # TEST SECTION #
-    #source_files = sorted(glob.glob('/home/sbowers3/DATA/S1_testdata/*.dim'))
-    #extent_dest = [600000,7900000,700000,8100000]
-    #EPSG_dest = 32736
-    #output_res = 10
-    #pol_list = ['VV','VH']
-    #output_dir = '/home/sbowers3/DATA/S1_testdata/'
-    #output_name = 'S1_output'
-    # TEST SECTION #
-
-    
+       
     assert len(extent_dest) == 4, "Output extent must be specified in the format [xmin, ymin, xmax, ymax]"
     assert len(source_files) >= 1, "No source files in specified location."
     
@@ -485,22 +517,34 @@ def main(source_files, extent_dest, EPSG_dest, output_res = 10,
         
     # It's only worth processing a tile if at least one input image is inside tile
     assert len(source_files_tile) >= 1, "No data inside specified tile. Not processing this tile."
-        
+    
+    # Keep track of output filenames
+    filenames = []
+    
     # Process images for each polarisation
     for pol in pol_list:
             
         print 'Doing polarisation %s'%pol
         
         # Using image_n, combine pixels into outputs images for each band
-        band_out = generateDataArray(source_files_tile, pol, md_dest, output_dir = output_dir, output_name = output_name)
-    
+        band_out, filename = generateDataArray(source_files_tile, pol, md_dest, output_dir = output_dir, output_name = output_name)
+        
+        # Keep track of output filenames
+        filenames.append(filename)
+        
     # Build VRT output files for straightforward visualisation
     print 'Building .VRT images for visualisation'
     
-    # NOT IMPLEMENTED YET
-    # False colour image (VV, VH, VV/VH)
-    #buildVRT('%s/%s_B04_R10m.tif'%(output_dir, output_name), '%s/%s_B03_R10m.tif'%(output_dir, output_name),
-    #          '%s/%s_B02_R10m.tif'%(output_dir, output_name), '%s/%s_RGB.vrt'%(output_dir, output_name))
+    if pol_list.tolist() == ['VV','VH'] or pol_list.tolist() == ['VH', 'VV']:
+        
+        # Build a VV/VH image
+        filename_VVVH = buildVVVH(filenames[pol_list.tolist().index('VV')], filenames[pol_list.tolist().index('VH')], output_dir = output_dir, output_name = output_name)
+        
+        # Build a false colour composite image
+        
+        # False colour image (VV, VH, VV/VH)
+        buildVRT(filenames[pol_list.tolist().index('VV')], filenames[pol_list.tolist().index('VH')], filename_VVVH,
+                 '%s/%s_FCC.vrt'%(output_dir, output_name))
     
     
     print 'Processing complete!'
