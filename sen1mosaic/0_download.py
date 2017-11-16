@@ -6,10 +6,8 @@ import glob
 import numpy as np
 import os
 import pandas
-import re
 import time
 import sentinelsat
-import zipfile
 
    
 

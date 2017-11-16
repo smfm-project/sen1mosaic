@@ -2,17 +2,12 @@
 
 import argparse
 import glob
-import glymur
 import numpy as np
 import os
 from scipy import ndimage
 import subprocess
 import pdb
 
-try:
-    import xml.etree.cElementTree as ET
-except ImportError:
-    import xml.etree.ElementTree as ET
 
 
 def _createOutputArray(md, dtype = np.uint16):
