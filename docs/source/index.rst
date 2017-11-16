@@ -39,7 +39,7 @@ Contents:
    :maxdepth: 2
 
    setup.rst
-   
+   command_line.rst
 
 Indices and tables
 ==================
