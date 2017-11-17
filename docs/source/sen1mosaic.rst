@@ -1,19 +1,24 @@
 0_download module
 =================
 
-Test1
+.. .. automodule:: 0_download
+           :members:
+    :undoc-members:
+    :show-inheritance:
 
 1_pre-process module
 ====================
 
-Test2
+.. .. automodule:: 1_pre-process
+          :members:
+    :undoc-members:
+    :show-inheritance:
 
 2_tile module
 =============
 
-Test3
-~                                                                               
-~                            
-~                                                                               
-~                                                                               
-~                                     
+.. .. automodule:: 2_tile
+          :members:
+    :undoc-members:
+    :show-inheritance:
+
