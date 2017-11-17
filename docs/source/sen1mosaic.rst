@@ -9,7 +9,7 @@
 1_pre-process module
 ====================
 
-.. automodule:: sen1mosaic.1_pre-process
+.. automodule:: sen1mosaic.1_preprocess
     :members:
     :undoc-members:
     :show-inheritance:
