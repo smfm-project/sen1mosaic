@@ -1,24 +1,24 @@
 0_download module
 =================
 
-.. .. automodule:: 0_download
-           :members:
+.. automodule:: sen1mosaic.0_download
+    :members:
     :undoc-members:
     :show-inheritance:
 
 1_pre-process module
 ====================
 
-.. .. automodule:: 1_pre-process
-          :members:
+.. automodule:: sen1mosaic.1_pre-process
+    :members:
     :undoc-members:
     :show-inheritance:
 
 2_tile module
 =============
 
-.. .. automodule:: 2_tile
-          :members:
+.. automodule:: sen1mosaic.2_tile
+    :members:
     :undoc-members:
     :show-inheritance:
 
