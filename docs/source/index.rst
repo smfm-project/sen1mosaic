@@ -6,7 +6,6 @@
 Welcome to sen1mosaic's documentation!
 ======================================
 
-
 This is a set of tools to aid in the production of large-scale seasonal mosaic products from Sentinel-1 data.
 
 Building large-scale mosaics of Sentinel-1 data for land cover mapping is difficult, with existing tools still under-development and hard to use. The goal of these tools to streamline this processing chain with a set of straightforward command line tools.
@@ -33,6 +32,7 @@ Who do I talk to?
 Written and maintained by Samuel Bowers (`sam.bowers@ed.ac.uk <mailto:sam.bowers@ed.ac.uk>`_).
 
 Contents:
+---------
 
 .. toctree::
    :numbered:
