@@ -30,9 +30,9 @@
     </sources>
     <parameters class="com.bc.ceres.binding.dom.XppDomElement">
       <sourceBands/>
-      <filter>Gamma Map</filter>
-      <filterSizeX>7</filterSizeX>
-      <filterSizeY>7</filterSizeY>
+      <filter>Refined Lee</filter>
+      <filterSizeX>3</filterSizeX>
+      <filterSizeY>3</filterSizeY>
       <dampingFactor>2</dampingFactor>
       <estimateENL>true</estimateENL>
       <enl>1.0</enl>
