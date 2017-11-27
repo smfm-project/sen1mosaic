@@ -11,7 +11,7 @@
   <node id="Speckle-Filter">
     <operator>Speckle-Filter</operator>
     <sources>
-      <sourceProduct refid="Terrain-Flattening"/>
+      <sourceProduct refid="Read"/>
     </sources>
     <parameters class="com.bc.ceres.binding.dom.XppDomElement">
       <sourceBands/>

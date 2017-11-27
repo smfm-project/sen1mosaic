@@ -26,7 +26,7 @@ def stitching_single(infile, outfile, xmlfile = os.path.join(os.path.dirname(__f
       %(xmlfile,infile,outfile)) # -c 16384M # -c 32768M -q 16
 
 
-def correction(infile, outfile, xmlfile = os.path.join(os.path.dirname(__file__), '../cfg/2_terrain_correction_short.xml')):
+def correction(infile, outfile, xmlfile = os.path.join(os.path.dirname(__file__), '../cfg/2_terrain_correction.xml')):
     
     os.system('~/snap/bin/gpt %s -x -Pinputfile=%s -Poutputfile=%s'\
       %(xmlfile,infile,outfile)) # -c 16384M # -c 32768M -q 16
