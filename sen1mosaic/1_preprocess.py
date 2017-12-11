@@ -131,7 +131,7 @@ def getExtent(infile):
     Returns:
         A string with the new extent to use for this file.
     '''
-    pdb.set_trace()
+    
     assert infile[-4:] == '.dim', "The input to getExtent() must be a .dim file. You input %s"%str(infile)
     
     filename = sorted(glob.glob(infile[:-4] + '.data/*.img'))[0]
