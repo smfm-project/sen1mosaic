@@ -2,10 +2,11 @@
 
 import argparse
 import pdb
+import glob
 import numpy as np
 import os
-import time
 import sys
+import time
 
 
 def preprocess(infile, outfile, xmlfile = os.path.join(os.path.dirname(__file__), '../cfg/0_calibrate_short.xml')):
