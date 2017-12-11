@@ -130,9 +130,9 @@ def getExtent(infile):
         A string with the new extent to use for this file.
     '''
     
-    assert infile[:-4] == '.dim', "The input to getExtent() must be a .dim file. You input %s"%str(infile)
+    assert infile[-4:] == '.dim', "The input to getExtent() must be a .dim file. You input %s"%str(infile)
     
-    filename = sorted(glob.glob(infile[:-4] + '/*.data/*.img'))[0]
+    filename = sorted(glob.glob(infile[-4:] + '/*.data/*.img'))[0]
     
     ds = gdal.Open(filename,0)
     
