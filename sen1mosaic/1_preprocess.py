@@ -26,10 +26,10 @@ def stitching_single(infile, outfile, xmlfile = os.path.join(os.path.dirname(__f
       %(xmlfile,infile,outfile)) # -c 16384M # -c 32768M -q 16
 
 
-def correction(infile, outfile, xmlfile = os.path.join(os.path.dirname(__file__), '../cfg/2_terrain_correction.xml')):
+def correction(infile, outfile, extent, xmlfile = os.path.join(os.path.dirname(__file__), '../cfg/2_terrain_correction.xml')):
     
-    os.system('~/snap/bin/gpt %s -x -Pinputfile=%s -Poutputfile=%s'\
-      %(xmlfile,infile,outfile)) # -c 16384M # -c 32768M -q 16
+    os.system('~/snap/bin/gpt %s -x -Pinputfile=%s -Poutputfile=%s -Pextent=%s'\
+      %(xmlfile,infile,outfile, extent)) # -c 16384M # -c 32768M -q 16
 
 
 def _getMetaData(infile):
@@ -117,6 +117,30 @@ def splitFiles(infiles, max_scenes):
     return infiles_split
 
 
+def getExtent(infile):
+    '''
+    Occasional border artifacts are left in Sentinel-1 data in the azimuth direction. We remove 500 pixels from each edge of the image to catch these.
+    
+    To perform this operation, we must get the extent of the image.
+    
+    Args:
+        infile: /path/to/the/Sentinel-1.dim file
+    
+    Returns:
+        A string with the new extent to use for this file.
+    '''
+    
+    assert infile[:-4] == '.dim', "The input to getExtent() must be a .dim file. You input %s"%str(infile)
+    
+    filename = sorted(glob.glob(infile[:-4] + '/*.data/*.img'))[0]
+    
+    ds = gdal.Open(filename,0)
+    
+    extent = 0, 500, ds.RasterXSize, ds.RasterYSize - 500
+    
+    return ','.join([str(i) for i in extent])
+
+
 def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), remove = True):
     '''
     A function to pre-process one or more Sentinel-1 IW GRD images in preparation for mosaicking with the SNAP Graph Processing Tool. Images are processed in three steps: 1) Calibration, 2) Reassembly into a single image (if >1 image used from an overpass), and 3) Geometric correction.
@@ -184,11 +208,12 @@ def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), remo
         # Execute Graph Processing Tool
         stitching_single(infile, outfile)
     
+    extent = getExtent(outfile)    
     
     print 'Geometrically correcting %s'%outfile # outfile = latest file
     
     # Step 3: Perform geometric correction
-    correction(outfile, output_file)
+    correction(outfile, output_file, extent)
     
     # Tidy up by deleting temporary intermediate files
     if remove:

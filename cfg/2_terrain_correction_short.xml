@@ -28,10 +28,26 @@
       <anSize>50</anSize>
     </parameters>
   </node>
+  <node id="Subset">
+    <operator>Subset</operator>
+    <sources>
+      <sourceProduct refid="Speckle-Filter"/>
+    </sources>
+    <parameters class="com.bc.ceres.binding.dom.XppDomElement">
+      <sourceBands/>
+      <region>${extent}</region>
+      <geoRegion/>
+      <subSamplingX>1</subSamplingX>
+      <subSamplingY>1</subSamplingY>
+      <fullSwath>false</fullSwath>
+      <tiePointGridNames/>
+      <copyMetadata>true</copyMetadata>
+    </parameters>
+  </node>
   <node id="Terrain-Correction">
     <operator>Terrain-Correction</operator>
     <sources>
-      <sourceProduct refid="Speckle-Filter"/>
+      <sourceProduct refid="Subset"/>
     </sources>
     <parameters class="com.bc.ceres.binding.dom.XppDomElement">
       <sourceBands/>
@@ -79,6 +95,9 @@
     </node>
     <node id="Terrain-Correction">
       <displayPosition x="290.0" y="116.0"/>
+    </node>
+    <node id="Subset">
+      <displayPosition x="200.0" y="116.0"/>
     </node>
     <node id="Speckle-Filter">
       <displayPosition x="113.0" y="47.0"/>
