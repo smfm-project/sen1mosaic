@@ -138,7 +138,7 @@ def getExtent(infile):
     
     ds = gdal.Open(filename,0)
     
-    extent = 0, 500, ds.RasterXSize, ds.RasterYSize - 500
+    extent = 500, 0, ds.RasterXSize - 500, ds.RasterYSize
     
     return ','.join([str(i) for i in extent])
 
