@@ -210,7 +210,8 @@ def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), remo
         # Execute Graph Processing Tool
         stitching_single(infile, outfile)
     
-    extent = getExtent(outfile)    
+    extent = getExtent(outfile)
+    pdb.set_trace()
     
     print 'Geometrically correcting %s'%outfile # outfile = latest file
     
