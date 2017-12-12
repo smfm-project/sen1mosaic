@@ -119,26 +119,29 @@ def splitFiles(infiles, max_scenes):
     return infiles_split
 
 
-def getExtent(infile):
+def getExtent(infile, buffer_size = 500):
     '''
-    Occasional border artifacts are left in Sentinel-1 data in the azimuth direction. We remove 500 pixels from each edge of the image to catch these.
+    Occasional border artifacts are left in Sentinel-1 data in the range direction. We remove pixels from each edge of the image to catch these. To perform this operation, we must get the extent of the image. This is a waste of data, but must remain until SNAP/Sentinel-1 data formats are consistent.
     
-    To perform this operation, we must get the extent of the image.
+    # See also: http://forum.step.esa.int/t/grd-border-noise-removal-over-ocean-areas/1582/13
     
     Args:
         infile: /path/to/the/Sentinel-1.dim file
+        buffer_size: Number of pixels to remove from range direction.
     
     Returns:
         A string with the new extent to use for this file.
     '''
     
     assert infile[-4:] == '.dim', "The input to getExtent() must be a .dim file. You input %s"%str(infile)
+    assert type(buffer_size) == int, "buffer_size must be an integer. You input %s"%str(buffer_size)
     
     filename = sorted(glob.glob(infile[:-4] + '.data/*.img'))[0]
     
     ds = gdal.Open(filename,0)
     
-    extent = 500, 0, ds.RasterXSize - 500, ds.RasterYSize
+    # Multiply buffer size by two, else it seems to remove nothing. I think it's not taking into account first element.
+    extent = buffer_size, 0, ds.RasterXSize - (buffer_size * 2), ds.RasterYSize
     
     return ','.join([str(i) for i in extent])
 
@@ -211,8 +214,7 @@ def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), remo
         stitching_single(infile, outfile)
     
     extent = getExtent(outfile)
-    pdb.set_trace()
-    
+        
     print 'Geometrically correcting %s'%outfile # outfile = latest file
     
     # Step 3: Perform geometric correction
