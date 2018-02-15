@@ -25,7 +25,7 @@ def preprocess(infile, outfile, short_chain = False):
       %(xmlfile,infile,outfile))
 
 
-def stitching(infile, outfile, single = True):
+def multilook(infile, outfile, multilook, single = True):
     """
     Step 2: Multilook and stitch scenes together.
     """
@@ -245,8 +245,7 @@ def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), mult
         if verbose: print 'Multilooking %s'%infiles[0]
     
     # Execute Graph Processing Tool
-    stitching(infiles_formatted, outfile, multilook, single = single)
-    
+    multilook(infiles_formatted, outfile, multilook, single = single)
     
     # Step 3: Perform geometric correction
     
