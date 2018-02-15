@@ -18,7 +18,7 @@ def preprocessGraph(infile, outfile, short_chain = False):
     if short_chain:
         xmlfile = os.path.join(os.path.dirname(__file__), '../cfg/1_calibrate_short.xml')
     else:
-        xmlfile = os.path.join(os.path.dirname(__file__), '../cfg/01_calibrate.xml')
+        xmlfile = os.path.join(os.path.dirname(__file__), '../cfg/1_calibrate.xml')
     
     # Execute chain
     os.system('~/snap/bin/gpt %s -x -Pinputfile=%s -Poutputfile=%s'\
