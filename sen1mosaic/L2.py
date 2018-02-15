@@ -198,7 +198,7 @@ def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), mult
     md_start = _getMetaData(infiles[0])
     md_end = _getMetaData(infiles[-1])
     
-    output_file = output_dir + 'S1_processed_%s_%s_%s_%s_%s'%(md_start['date'],md_start['starttime'],md_end['endtime'],md_start['orbit'], md_start['datatake'])
+    output_file = output_dir + 'S1_L2_%s_%s_%s_%s_%s'%(md_start['date'],md_start['starttime'],md_end['endtime'],md_start['orbit'], md_start['datatake'])
     
     # Step 1: Run calibration SNAP processing chain
     preprocess_files = []
