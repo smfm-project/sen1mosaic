@@ -37,7 +37,7 @@ def multilookGraph(infile, outfile, multilook, single = True):
         xmlfile = os.path.join(os.path.dirname(__file__), '../cfg/2_multilook.xml')
     
     # Execute chain
-    os.system('~/snap/bin/gpt %s -x -Pinputfile=%s -Poutputfile=%s -Pmultilook=%s'\
+    os.system('~/snap/bin/gpt %s -x -Pinputfiles=%s -Poutputfile=%s -Pmultilook=%s'\
       %(xmlfile, infile, outfile, multilook))
 
 
@@ -162,7 +162,7 @@ def getExtent(infile, buffer_size = 1000, multilook = 2):
     assert infile[-4:] == '.dim', "The input to getExtent() must be a .dim file. You input %s."%str(infile)
     assert type(buffer_size) == int, "buffer_size must be an integer. You input %s."%str(buffer_size)
     assert type(multilook) == int, "multilook must be an integer. You input %s."%str(multilook)
-    
+        
     filename = sorted(glob.glob(infile[:-4] + '.data/*.img'))[0]
     
     # Reduce buffer_size in line with degree of multilooking
