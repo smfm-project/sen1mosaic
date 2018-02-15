@@ -10,7 +10,7 @@ import sys
 import time
 
 
-def preprocess(infile, outfile, short_chain = False):
+def preprocessGraph(infile, outfile, short_chain = False):
     """
     Step 1: Preprocess input data.
     """
@@ -25,7 +25,7 @@ def preprocess(infile, outfile, short_chain = False):
       %(xmlfile,infile,outfile))
 
 
-def multilook(infile, outfile, multilook, single = True):
+def multilookGraph(infile, outfile, multilook, single = True):
     """
     Step 2: Multilook and stitch scenes together.
     """
@@ -41,7 +41,7 @@ def multilook(infile, outfile, multilook, single = True):
       %(xmlfile, infile, outfile, multilook))
 
 
-def correction(infile, outfile, extent, speckle_filter = False, short_chain = False):
+def correctionGraph(infile, outfile, extent, speckle_filter = False, short_chain = False):
     """
     Step 3: Terrain correction and filtering.
     """
@@ -214,7 +214,7 @@ def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), mult
         if verbose: print 'Pre-processing %s'%infile
         
         # Execute Graph Processing Tool
-        preprocess(infile, outfile, short_chain = short_chain)
+        preprocessGraph(infile, outfile, short_chain = short_chain)
         
         outfile += '.dim' # preprocess should not have .dim following file, but correction requires it so add it here
 
@@ -245,7 +245,7 @@ def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), mult
         if verbose: print 'Multilooking %s'%infiles[0]
     
     # Execute Graph Processing Tool
-    multilook(infiles_formatted, outfile, multilook, single = single)
+    multilookGraph(infiles_formatted, outfile, multilook, single = single)
     
     # Step 3: Perform geometric correction
     
@@ -255,7 +255,7 @@ def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), mult
     if verbose: print 'Geometrically correcting %s'%outfile # outfile = latest file
     
     # Execute Graph Processing Tool
-    correction(outfile, output_file, extent, speckle_filter = speckle_filter, short_chain = short_chain)
+    correctionGraph(outfile, output_file, extent, speckle_filter = speckle_filter, short_chain = short_chain)
     
     # Tidy up by deleting temporary intermediate files
     for this_file in preprocess_files:
