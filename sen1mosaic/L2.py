@@ -270,7 +270,7 @@ def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), mult
     return output_file
 
 
-def testCompletion(L1_files):
+def testCompletion(L1_files, output_dir = os.getcwd()):
     """
     Function to test whether the processing chains have generated output data
     """
