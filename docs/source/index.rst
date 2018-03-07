@@ -40,6 +40,7 @@ Contents:
 
    setup.rst
    command_line.rst
+   worked_example.rst
    sen1mosaic.rst
 
 Indices and tables
