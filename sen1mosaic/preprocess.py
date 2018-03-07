@@ -1,16 +1,111 @@
 #!/usr/bin/env python
 
 import argparse
-import pdb
+import functools
 import glob
+import multiprocessing
 import numpy as np
 import os
 from osgeo import gdal
+import signal
+import subprocess
 import sys
 import time
 
+import pdb
 
-def preprocessGraph(infile, outfile, short_chain = False):
+
+### Functions to enable command line interface with multiprocessing
+
+def _do_work(job_queue, counter=None):
+    """
+    Processes jobs from  the multiprocessing queue until all jobs are finished
+    Adapted from: https://github.com/ikreymer/cdx-index-client
+    
+    Args:
+        job_queue: multiprocessing.Queue() object
+        counter: multiprocessing.Value() object
+    """
+    
+    import Queue
+        
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    
+    while not job_queue.empty():
+        try:
+            job = job_queue.get_nowait()
+            
+            main_partial(job)
+
+            num_done = 0
+            with counter.get_lock():
+                counter.value += 1
+                num_done = counter.value
+                
+        except Queue.Empty:
+            pass
+
+        except KeyboardInterrupt:
+            break
+
+        except Exception:
+            if not job:
+                raise
+
+
+def _run_workers(n_processes, jobs):
+    """
+    This script is a queuing system that respects KeyboardInterrupt.
+    Adapted from: https://github.com/ikreymer/cdx-index-client
+    Which in turn was adapted from: http://bryceboe.com/2012/02/14/python-multiprocessing-pool-and-keyboardinterrupt-revisited/
+    
+    Args:
+        n_processes: Number of parallel processes
+        jobs: List of input tiles for sen2cor
+    """
+    
+    import psutil 
+    
+    # Queue up all jobs
+    job_queue = multiprocessing.Queue()
+    counter = multiprocessing.Value('i', 0)
+    
+    for job in jobs:
+        job_queue.put(job)
+    
+    workers = []
+    
+    for i in xrange(0, n_processes):
+        
+        tmp = multiprocessing.Process(target=_do_work, args=(job_queue, counter))
+        tmp.daemon = True
+        tmp.start()
+        workers.append(tmp)
+
+    try:
+        
+        for worker in workers:
+            worker.join()
+            
+    except KeyboardInterrupt:
+        for worker in workers:
+            print 'Keyboard interrupt (ctrl-c) detected. Exiting all processes.'
+            # This is an impolite way to kill sen2cor, but it otherwise does not listen.
+            parent = psutil.Process(worker.pid)
+            children = parent.children(recursive=True)
+            parent.send_signal(signal.SIGKILL)
+            for process in children:
+                process.send_signal(signal.SIGKILL)
+            worker.terminate()
+            worker.join()
+            
+        raise
+
+
+
+### Primary functions
+
+def preprocessGraph(infile, outfile, short_chain = False, verbose = False):
     """
     Step 1: Preprocess input data.
     """
@@ -19,10 +114,9 @@ def preprocessGraph(infile, outfile, short_chain = False):
         xmlfile = os.path.join(os.path.dirname(__file__), '../cfg/1_calibrate_short.xml')
     else:
         xmlfile = os.path.join(os.path.dirname(__file__), '../cfg/1_calibrate.xml')
-    
+       
     # Execute chain
-    os.system('~/snap/bin/gpt %s -x -Pinputfile=%s -Poutputfile=%s'\
-      %(xmlfile,infile,outfile))
+    os.system('~/snap/bin/gpt %s -x -Pinputfile=%s -Poutputfile=%s'%(xmlfile, infile, outfile))    
 
 
 def multilookGraph(infile, outfile, multilook, single = True):
@@ -119,32 +213,6 @@ def getContiguousImages(infiles):
     return group
 
 
-def splitFiles(infiles, max_scenes):
-    '''
-    Split a 1-d numpy array into overlapping segments of size n. The purpose of this function is to prevent very long chains of Sentinel-1 data being processed together and crashing SNAP. Based on solution in https://stackoverflow.com/questions/36586897/splitting-a-python-list-into-a-list-of-overlapping-chunks.
-    
-    Args:
-        infiles: A numpy array of Sentinel-1 file paths.
-        max_scenes: Number of files per segment.
-    
-    Returns:
-        A list of arrays split into segments of size max_scenes.
-    '''
-    
-    assert max_scenes > 1, "max_scenes must be > 1, else there won't be multiple scenes for the stiching algorithm"
-    
-    # Overlap size
-    overlap = 1
-        
-    infiles_split = [infiles[i:i+max_scenes] for i in xrange(0,infiles.shape[0], max_scenes - overlap)]
-    
-    # This catches case where only one overlapping file is included
-    if len(infiles_split) > 1 and len(infiles_split[-1]) == 1:
-        infiles_split = infiles_split[:-1]
-                                         
-    return infiles_split
-
-
 def getExtent(infile, buffer_size = 1000, multilook = 2):
     '''
     Occasional border artifacts are left in Sentinel-1 data in the range direction. We remove pixels from each edge of the image to catch these. To perform this operation, we must get the extent of the image. This does waste data, but must remain until SNAP/Sentinel-1 data formats are consistent.
@@ -199,7 +267,7 @@ def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), mult
     md_end = _getMetaData(infiles[-1])
     
     output_file = output_dir + 'S1_L2_%s_%s_%s_%s_%s'%(md_start['date'],md_start['starttime'],md_end['endtime'],md_start['orbit'], md_start['datatake'])
-    
+        
     # Step 1: Run calibration SNAP processing chain
     preprocess_files = []
     
@@ -221,7 +289,7 @@ def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), mult
 
     # Step 2: Perform multilooking
     
-    # Where more than one image, they need to be reassmbled into a single image    
+    # Where more than one image, they can be be reassembled into a single image. This removes artefacts from boundaries.
     if len(preprocess_files) > 1: 
                             
         # Format input files to a string separated by commas
@@ -251,7 +319,7 @@ def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), mult
     
     # Get file extent
     extent = getExtent(outfile, multilook = multilook)
-        
+    
     if verbose: print 'Geometrically correcting %s'%outfile # outfile = latest file
     
     # Execute Graph Processing Tool
@@ -287,36 +355,65 @@ def removeL1(L1_files):
     """
     
     print 'Not deleting input file. Yet.'
-    
 
-def main(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), max_scenes = 3, multilook = 2, speckle_filter = False, short_chain = False, remove = False, verbose = False):
+
+
+def splitFiles(infiles, max_scenes, overlap = False):
+    '''
+    Split a 1-d numpy array into overlapping segments of size n. The purpose of this function is to prevent very long chains of Sentinel-1 data being processed together and crashing SNAP. Based on solution in https://stackoverflow.com/questions/36586897/splitting-a-python-list-into-a-list-of-overlapping-chunks.
+    
+    Args:
+        infiles: A numpy array of Sentinel-1 file paths.
+        max_scenes: Number of files per segment.
+        overlap: Set to True to re-process overlapping scnes to avoid ugly overlaps
+    
+    Returns:
+        A list of arrays split into segments of size max_scenes.
+    '''
+    
+    assert max_scenes > 1, "max_scenes must be > 1, else there won't be multiple scenes for the stiching algorithm"
+    
+    # Get a unique group number
+    groups = getContiguousImages(infiles)
+    
+    # Get overlapping strips of Sentinel-1 data
+    infiles_split = []
+    
+    for group in np.unique(groups):
+        
+        these_infiles = infiles[groups == group]
+        
+        if overlap:
+            n = max_scenes - 1
+        else:
+            n = max_scenes
+        
+        these_infiles_split = [these_infiles[i:i+max_scenes] for i in xrange(0,these_infiles.shape[0], n)]
+    
+        # This catches case where only one overlapping file is included
+        for i in these_infiles_split:
+            
+            if len(these_infiles_split) > 1 and len(these_infiles_split[-1]) == 1:
+                these_infiles_split = these_infiles_split[:-1]
+        
+        infiles_split.append(these_infiles_split[0])
+     
+    return infiles_split
+
+
+def main(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), multilook = 2, speckle_filter = False, short_chain = False, remove = False, verbose = False):
     '''
     '''
     
-    # Convert arguments to absolute paths    
-    infiles = np.array(sorted([os.path.abspath(i) for i in infiles])) # Also sort, and convert to an array.
-    output_dir = os.path.abspath(output_dir)
-    temp_dir = os.path.abspath(temp_dir)
+    output_file = processFiles(infiles, output_dir = output_dir, temp_dir = temp_dir, multilook = multilook, speckle_filter = speckle_filter, short_chain = short_chain, verbose = verbose)
+                        
+    ##TODO: Test that output file has been generated correctly.
+    if testCompletion(infiles, output_dir = output_dir) == False:
+        print 'WARNING: %s did not complete processing.'%infile
+        
+    # TODO: Build a removal function
+    if remove: removeL1(infiles_split)
     
-    # Determine which images should be processed together as one contiguous overpass
-    group = getContiguousImages(infiles)
-    
-    # Process one group at a time
-    for this_group in np.unique(group):
-        
-        infiles_split = splitFiles(infiles[group == this_group], max_scenes)
-        
-        for input_files in infiles_split:
-        
-            output_file = processFiles(input_files, output_dir = output_dir, temp_dir = temp_dir, multilook = multilook, speckle_filter = speckle_filter, short_chain = short_chain, verbose = verbose)
-            
-            #TODO: Test that output file has been generated correctly.
-            if testCompletion(infiles, output_dir = output_dir) == False:
-                print 'WARNING: %s did not complete processing.'%infile
-            
-        # TODO: Build a removal function
-        if remove: removeL1(infiles_split)
-            
 
 if __name__ == '__main__':
     """
@@ -342,13 +439,33 @@ if __name__ == '__main__':
     optional.add_argument('-s', '--short', action = 'store_true', help = "Perform a more rapid processing chain, ommitting some processing steps. Useful for testing. Defaults to False.")
     optional.add_argument('-r', '--remove', action = 'store_true', help = "Optionally delete input scenes after processing complete.")
     optional.add_argument('-v', '--verbose', action = 'store_true', help = "Set script to print progress.")
-    
+    optional.add_argument('-p', '--n_processes', type = int, metavar = 'N', default = 1, help = "Specify a maximum number of tiles to process in paralell. Bear in mind that more processes will require more memory. Defaults to 1.")
+
     # Parse command line arguments    
-    args = parser.parse_args()
+    args = parser.parse_args()   
     
-    # Execute module
-    main(args.infiles, output_dir = args.output_dir, temp_dir = args.temp_dir, max_scenes = args.max_scenes, multilook = args.multilook, speckle_filter = args.speckle_filter, short_chain = args.short, remove = args.remove, verbose = args.verbose)
+    
+    # Convert arguments to absolute paths    
+    infiles = np.array(sorted([os.path.abspath(i) for i in args.infiles])) # Also sort, and convert to an array.
+    output_dir = os.path.abspath(args.output_dir)
+    temp_dir = os.path.abspath(args.temp_dir)
+    
+    # Determine which images should be processed together as one contiguous overpass
+    infiles_split = splitFiles(infiles, args.max_scenes)
+    
+    # Keep things simple if using one process
+    if args.n_processes == 1:
+            
+        for input_files in infiles_split:
         
+            # Execute module
+            main(args.infiles, output_dir = args.output_dir, temp_dir = args.temp_dir, multilook = args.multilook, speckle_filter = args.speckle_filter, short_chain = args.short, remove = args.remove, verbose = args.verbose)
+    
+    else:
+        
+        main_partial = functools.partial(main, output_dir = args.output_dir, temp_dir = args.temp_dir, multilook = args.multilook, speckle_filter = args.speckle_filter, short_chain = args.short, remove = args.remove, verbose = args.verbose)
+                    
+        _run_workers(args.n_processes, infiles_split)
 
         
 

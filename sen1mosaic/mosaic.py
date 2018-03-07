@@ -296,8 +296,6 @@ def getFilesInTile(source_files, md_dest):
     # Sort source files alphabetically by tile reference.    
     source_files = _sortSourceFiles(source_files)
     
-    # Extract this image's resolution from md_dest
-    #res = md_dest['res']
                 
     # Determine which L3A images are within specified tile bounds
     print 'Searching for source files within specified tile...'
@@ -548,7 +546,7 @@ def main(source_files, extent_dest, EPSG_dest, output_res = 10,
 if __name__ == "__main__":
     
     # Set up command line parser
-    parser = argparse.ArgumentParser(description = "Process Sentinel-2 level 3A data to unofficial 'level 3B'. This script mosaics L3A into a customisable grid square, based on specified UTM coordinate bounds. Files are output as GeoTiffs, which are easier to work with than JPEG2000 files.")
+    parser = argparse.ArgumentParser(description = "Process Sentinel-1 data into mosaicked tiles. This script mosaics Sentinel-1 data into a customisable grid square, based on specified UTM coordinate bounds. Files are output as GeoTiffs.")
 
     parser._action_groups.pop()
     required = parser.add_argument_group('required arguments')
