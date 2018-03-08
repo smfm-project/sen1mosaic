@@ -8,10 +8,25 @@
       <formatName>BEAM-DIMAP</formatName>
     </parameters>
   </node>
+  <node id="Terrain-Flattening">
+    <operator>Terrain-Flattening</operator>
+    <sources>
+      <sourceProduct refid="Read"/>
+    </sources>
+    <parameters class="com.bc.ceres.binding.dom.XppDomElement">
+      <sourceBands/>
+      <demName>SRTM 1Sec HGT</demName>
+      <demResamplingMethod>BILINEAR_INTERPOLATION</demResamplingMethod>
+      <externalDEMFile/>
+      <externalDEMNoDataValue>0.0</externalDEMNoDataValue>
+      <outputSimulatedImage>false</outputSimulatedImage>
+      <reGridMethod>false</reGridMethod>
+    </parameters>
+  </node>
   <node id="Subset">
     <operator>Subset</operator>
     <sources>
-      <sourceProduct refid="Read"/>
+      <sourceProduct refid="Terrain-Flattening"/>
     </sources>
     <parameters class="com.bc.ceres.binding.dom.XppDomElement">
       <sourceBands/>
@@ -78,6 +93,9 @@
     </node>
     <node id="Subset">
       <displayPosition x="200.0" y="116.0"/>
+    </node>
+    <node id="Terrain-Flattening">
+      <displayPosition x="273.0" y="159.0"/>
     </node>
     <node id="Read">
             <displayPosition x="28.0" y="16.0"/>
