@@ -82,6 +82,10 @@ Wait for all files to be processed to level 2A before proceeding. If you run ``l
     S2A_MSIL2A_20170628T075211_N0205_R092_T36KWA_20170628T080542.SAFE
 
 
+
+
+    s1m mosaic ./S1_L2*.dim -te 710500 7890000 1250000 8330000 -e 32736 -r 20
+
 Generating a cloud-free composite image
 ---------------------------------------
 
