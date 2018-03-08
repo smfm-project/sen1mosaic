@@ -105,6 +105,39 @@ def _run_workers(n_processes, jobs):
 
 ### Primary functions
 
+def _prepInfiles(infiles):
+    """
+    Function to identify valid input files for processing chain
+    
+    Args:
+        infiles: A list of input files, directories, or tiles for Sentinel-1 inputs.
+    Returns:
+        A list of all Sentinel-1 IW GRD files in infiles.
+    """
+    
+    # Get absolute path, stripped of symbolic links
+    infiles = [os.path.abspath(os.path.realpath(infile)) for infile in infiles]
+    
+    # List to collate 
+    infiles_reduced = []
+    
+    for infile in infiles:
+         
+        # Where infile is a directory:
+        infiles_reduced.extend(glob.glob('%s/*.zip'%infile))
+        
+        # Where infile is a .zip file
+        if infile.split('/')[-1].split('.')[-1] == 'zip': infiles_reduced.extend([infile])
+    
+    # Strip repeats (in case)
+    infiles_reduced = list(set(infiles_reduced))
+    
+    # Reduce input files to only IW GRD files
+    infiles_reduced = [infile for infile in infiles_reduced if ('_IW_GRDH_' in infile.split('/')[-1])]
+    
+    return infiles_reduced
+
+
 def preprocessGraph(infile, outfile, short_chain = False, verbose = False):
     """
     Step 1: Preprocess input data.
@@ -413,7 +446,9 @@ def main(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), multilook = 
         
     # TODO: Build a removal function
     if remove: removeL1(infiles_split)
-    
+
+
+
 
 if __name__ == '__main__':
     """
@@ -444,6 +479,8 @@ if __name__ == '__main__':
     # Parse command line arguments    
     args = parser.parse_args()   
     
+    # Extract all eligible input files (.zip, or directory containing .zip)
+    infiles = _prepInfiles(args.infiles)
     
     # Convert arguments to absolute paths    
     infiles = np.array(sorted([os.path.abspath(i) for i in args.infiles])) # Also sort, and convert to an array.

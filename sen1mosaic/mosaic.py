@@ -2,11 +2,15 @@
 
 import argparse
 import glob
+import math
 import numpy as np
 import os
 from scipy import ndimage
 import subprocess
+
+
 import pdb
+
 
 
 
@@ -34,7 +38,7 @@ def _sortSourceFiles(source_files):
         source_files: A list of processed Sentinel-1 files
     
     Returns:
-        A list of source_files alphabetised by date.
+        A list of source_files sorted by date.
     '''
     
     source_files.sort() #TODO: ensure this is sorted by date
@@ -165,22 +169,22 @@ def _updateDataArray(data_out, data_resampled, action = 'sum'):
     Args:
         data_out: A numpy array representing the band data to be output.
         data_resampled: A numpy array containing resampled band data to be added to data_out.
-        image_n: A numpy array representing the image number from _updateMaskArrays().
-        n: An integer describing the image number (first image = 1, second image = 2 etc.).
-        scl_out: A numpy array representing the SCL mask from _updateMaskArrays().
+        action: 
     
     Returns:
         The data_out array with pixels from data_resampled added.
         
     '''
     
+    assert action in ['sum', 'min', 'max'], "Variable 'action' must be set to 'sum', 'min' or 'max'. It was set to %s."%str(action)
+    
     # Add good data to data_out array   
     if action == 'sum':
         data_out += data_resampled
     elif action == 'max':
         data_out[data_resampled > data_out] = data_resampled[data_resampled > data_out]
-    else:
-        print 'ERROR in update band array action selection,'
+    elif action == 'min':
+        data_out[np.logical_or(data_resampled < data_out, data_out == 0)] = data_resampled[np.logical_or(data_resampled < data_out, data_out == 0)]
 
     return data_out
 
@@ -281,12 +285,13 @@ def buildMetadataDictionary(extent_dest, res, EPSG):
     return md
 
 
-def getFilesInTile(source_files, md_dest):
+def getFilesInTile(source_files, pol, md_dest):
     '''
-    Takes a list of source files as input, and determines where each falls within extent of output tile.
+    Takes a list of source files as input, and determines where each falls within extent of output tile and contains data for input polarisation.
     
     Args:
         source_files: A list of input files.
+        pol: Polarisation. Set to either 'VV' or 'VH'.
         md_dest: Dictionary from buildMetaDataDictionary() containing output projection details.
 
     Returns:
@@ -295,8 +300,7 @@ def getFilesInTile(source_files, md_dest):
     
     # Sort source files alphabetically by tile reference.    
     source_files = _sortSourceFiles(source_files)
-    
-                
+          
     # Determine which L3A images are within specified tile bounds
     print 'Searching for source files within specified tile...'
     
@@ -315,6 +319,10 @@ def getFilesInTile(source_files, md_dest):
             do_tile.append(False)
             continue
         
+        if len(glob.glob(S1_file.rstrip('/')[:-4] + '.data/*_%s.img'%pol)) == 0:
+            do_tile.append(False)
+            continue
+        
         print '    Found one: %s'%S1_file
         do_tile.append(True)
     
@@ -322,7 +330,6 @@ def getFilesInTile(source_files, md_dest):
     source_files_tile = list(np.array(source_files)[np.array(do_tile)])
     
     return source_files_tile
-
 
 
 def generateDataArray(source_files, pol, md_dest, output_dir = os.getcwd(), output_name = 'S1_output'):
@@ -343,29 +350,40 @@ def generateDataArray(source_files, pol, md_dest, output_dir = os.getcwd(), outp
     """
     
     # Create array to contain output array for this band
-    data_out = _createOutputArray(md_dest, dtype = np.float32) # To add output data to
-    n_images = _createOutputArray(md_dest, dtype = np.int16) # To track number of images for calculating mean
+    data_num = _createOutputArray(md_dest, dtype = np.int16) # To track number of images for calculating mean
+    data_sum = _createOutputArray(md_dest, dtype = np.float32) # To track sum of input images
+    data_var = _createOutputArray(md_dest, dtype = np.float32) # To track sum of variance of input images for calculating standard deviation
+    data_min = _createOutputArray(md_dest, dtype = np.float32) # To track sum of max value of input images
+    data_max = _createOutputArray(md_dest, dtype = np.float32) # To track sum of min value of input images
+    
     data_date = _createOutputArray(md_dest, dtype = np.float32) # To add new data for each date (taking max value forward)
     
-    # Extract this image's resolution from md_dest
-    #res = md_dest['res']
+    # Reduce the pool of source_files to only those that overlap with output tile.
+    source_files_tile = getFilesInTile(source_files, pol, md_dest)
         
+    # It's only worth processing anything if at least one input image is inside tile
+    assert len(source_files_tile) >= 1, "No data inside specified tile for polarisation %s. Not processing this tile."%pol
+                
     # For each source file
-    for n, source_file in enumerate(source_files):
+    for n, source_file in enumerate(source_files_tile):
         
         print '    Adding pixels from %s'%source_file.split('/')[-1]
                
         # Get source file metadata
         extent_source, res, EPSG_source, date = getSourceMetadata(source_file)
-                
+        
         # Define source file metadata dictionary
         md_source = buildMetadataDictionary(extent_source, res, EPSG_source)
         
-        # Update output arrays if we're finished with a previous overpass
+        # Update output arrays if we're finished with the previous date. Skip on first iteration as there's no data yet.
         if n != 0:
             if date != last_date:
-                data_out = _updateDataArray(data_out, data_date, action = 'sum')
-                n_images = _updateDataArray(n_images, (data_date != 0) * 1, action = 'sum')
+                
+                data_num = _updateDataArray(data_num, (data_date != 0) * 1, action = 'sum')
+                data_sum = _updateDataArray(data_sum, data_date, action = 'sum')
+                data_var = _updateDataArray(data_var, data_date ** 2, action = 'sum')
+                data_min = _updateDataArray(data_min, data_date, action = 'min')
+                data_max = _updateDataArray(data_max, data_date, action = 'max')
 
         # Update date for next loop
         last_date = date
@@ -382,7 +400,7 @@ def generateDataArray(source_files, pol, md_dest, output_dir = os.getcwd(), outp
         # Reproject source to destination projection and extent
         data_resampled = _reprojectImage(ds_source, ds_dest, md_source, md_dest)
         
-        # Update array for this date (allowing only 1 measurement per date to be included in mean)
+        # Update array for this date (allowing only 1 measurement per date to be included in sum)
         data_date = _updateDataArray(data_date, data_resampled, action = 'max')
         
         # Tidy up
@@ -390,25 +408,34 @@ def generateDataArray(source_files, pol, md_dest, output_dir = os.getcwd(), outp
         ds_dest = None
    
     # Update output arrays on final loop
-    data_out = _updateDataArray(data_out, data_date, action = 'sum')
-    n_images = _updateDataArray(n_images, (data_date != 0) * 1, action = 'sum')
-    
+    data_num = _updateDataArray(data_num, (data_date != 0) * 1, action = 'sum')
+    data_sum = _updateDataArray(data_sum, data_date, action = 'sum')
+    data_var = _updateDataArray(data_var, data_date ** 2, action = 'sum')
+
     # Get rid of zeros in cases of no data
-    n_images[n_images==0] = 1 
+    data_num[data_num==0] = 1 
     
-    # Change data_out to a mean
-    data_out = data_out / n_images.astype(np.float32)
+    # Calculate mean of input data
+    data_mean = data_sum / data_num.astype(np.float32)
+    
+    # Calculate std of input data (See: https://stackoverflow.com/questions/5543651/computing-standard-deviation-in-a-stream). Where standard deviation undefined (< 2 samples), set to 0.
+
+    data_std = np.zeros_like(data_mean)
+    data_std[data_num > 1] = ((data_num * data_var - data_sum * data_sum)[data_num > 1]) / ((data_sum * (data_num - 1))[data_num > 1])
+    data_std[data_std < 0] = 0.
+    data_std = np.sqrt(data_std)
     
     print 'Outputting polarisation %s'%pol
     
-    filename = '%s/%s_%s_R%sm.tif'%(output_dir, output_name, pol, str(md_dest['res']))
+    filename = '%s/%s_%s_%s_R%sm.tif'%(output_dir, output_name, '%s', pol, str(md_dest['res']))
     
-    # Write output for this band to disk
-    ds_out = _createGdalDataset(md_dest, data_out = data_out,
-                        filename = filename,
-                        driver='GTiff', dtype = 6, options = ['COMPRESS=LZW'])
+    # Output files
+    ds_out = _createGdalDataset(md_dest, data_out = data_mean, filename = filename%'mean', driver='GTiff', dtype = 6, options = ['COMPRESS=LZW'])
+    ds_out = _createGdalDataset(md_dest, data_out = data_std, filename = filename%'stdev', driver='GTiff', dtype = 6, options = ['COMPRESS=LZW'])
+    ds_out = _createGdalDataset(md_dest, data_out = data_max, filename = filename%'max', driver='GTiff', dtype = 6, options = ['COMPRESS=LZW'])
+    ds_out = _createGdalDataset(md_dest, data_out = data_min, filename = filename%'min', driver='GTiff', dtype = 6, options = ['COMPRESS=LZW'])
 
-    return data_out, filename
+    return filename
 
 
 def buildVVVH(VV_file, VH_file, output_dir = os.getcwd(), output_name = 'S1_output'):
@@ -435,10 +462,10 @@ def buildVVVH(VV_file, VH_file, output_dir = os.getcwd(), output_name = 'S1_outp
         
     # Output
     res = str(int(round(ds_VV.GetGeoTransform()[1])))
-    filename = '%s/%s_VVVH_R%sm.tif'%(output_dir, output_name, res)
+    filename = '%s/%s_%s_VVVH_R%sm.tif'%(output_dir, output_name, 'mean', res)
     
     gdal_driver = gdal.GetDriverByName('GTiff')
-    ds = gdal_driver.Create(filename, ds_VV.RasterYSize, ds_VV.RasterXSize, 1, 6, options = ['COMPRESS=LZW'])
+    ds = gdal_driver.Create(filename, ds_VV.RasterXSize, ds_VV.RasterYSize, 1, 6, options = ['COMPRESS=LZW'])
     ds.SetGeoTransform(ds_VV.GetGeoTransform())
     ds.SetProjection(ds_VV.GetProjection())
         
@@ -477,7 +504,7 @@ def buildVRT(red_band, green_band, blue_band, output_path):
     
 
 def main(source_files, extent_dest, EPSG_dest, output_res = 10,
-    pol_list = ['VV', 'VH'],
+    pol = 'both',
     output_dir = os.getcwd(), output_name = 'S1_output'):
     """
     
@@ -495,9 +522,13 @@ def main(source_files, extent_dest, EPSG_dest, output_res = 10,
        
     assert len(extent_dest) == 4, "Output extent must be specified in the format [xmin, ymin, xmax, ymax]"
     assert len(source_files) >= 1, "No source files in specified location."
+    assert pol in ['VV', 'VH', 'both'], "Polarisation must be set to 'VV', 'VH' or 'both'. You input %s."%str(pol)
     
     # Convert band and res list to numpy arrays for indexing
-    pol_list = np.array(pol_list)
+    if pol == 'both':
+        pol_list = np.array(['VV', 'VH'])
+    else:
+        pol_list = np.array([pol])
     
     # Remove trailing / from output directory if present 
     output_dir = output_dir.rstrip('/')
@@ -505,22 +536,16 @@ def main(source_files, extent_dest, EPSG_dest, output_res = 10,
     # Build a dictionary with output projection metadata
     md_dest = buildMetadataDictionary(extent_dest, output_res, EPSG_dest)    
         
-    # Reduce the pool of source_files to only those that overlap with output tile
-    source_files_tile = getFilesInTile(source_files, md_dest)
-        
-    # It's only worth processing a tile if at least one input image is inside tile
-    assert len(source_files_tile) >= 1, "No data inside specified tile. Not processing this tile."
-    
     # Keep track of output filenames
     filenames = []
     
     # Process images for each polarisation
     for pol in pol_list:
-            
-        print 'Doing polarisation %s'%pol
         
+        print 'Doing polarisation %s'%pol
+                
         # Using image_n, combine pixels into outputs images for each band
-        band_out, filename = generateDataArray(source_files_tile, pol, md_dest, output_dir = output_dir, output_name = output_name)
+        filename = generateDataArray(source_files, pol, md_dest, output_dir = output_dir, output_name = output_name)
         
         # Keep track of output filenames
         filenames.append(filename)
@@ -531,13 +556,14 @@ def main(source_files, extent_dest, EPSG_dest, output_res = 10,
     if pol_list.tolist() == ['VV','VH'] or pol_list.tolist() == ['VH', 'VV']:
         
         # Build a VV/VH image
-        filename_VVVH = buildVVVH(filenames[pol_list.tolist().index('VV')], filenames[pol_list.tolist().index('VH')], output_dir = output_dir, output_name = output_name)
+        filename_VVVH = buildVVVH(filenames[pol_list.tolist().index('VV')]%'mean', filenames[pol_list.tolist().index('VH')]%'mean', output_dir = output_dir, output_name = output_name)
         
         # Build a false colour composite image
         # False colour image (VV, VH, VV/VH)
-        buildVRT(filenames[pol_list.tolist().index('VV')], filenames[pol_list.tolist().index('VH')], filename_VVVH,
-                 '%s/%s_FCC.vrt'%(output_dir, output_name))
-    
+        buildVRT(filenames[pol_list.tolist().index('VV')]%'mean', filenames[pol_list.tolist().index('VH')]%'mean', filename_VVVH,'%s/%s_FCC.vrt'%(output_dir, output_name))
+        
+        # Build an alternative false colour composite image
+        buildVRT(filenames[pol_list.tolist().index('VV')]%'min', filenames[pol_list.tolist().index('VH')]%'min', filenames[pol_list.tolist().index('VV')]%'stdev','%s/%s_FCC2.vrt'%(output_dir, output_name))
     
     print 'Processing complete!'
 
@@ -560,14 +586,15 @@ if __name__ == "__main__":
     # Optional arguments
     optional.add_argument('-o', '--output_dir', type=str, metavar = 'DIR', default = os.getcwd(), help="Optionally specify an output directory. If nothing specified, downloads will output to the present working directory, given a standard filename.")
     optional.add_argument('-n', '--output_name', type=str, metavar = 'NAME', default = 'S1_output', help="Optionally specify a string to precede output filename.")
-    optional.add_argument('-r', '--resolution', type=int, metavar = 'RES', default = 10, help="Optionally specify an output resolution in metres. Defaults to 10 m.")
-
+    optional.add_argument('-r', '--resolution', type=int, metavar = 'RES', default = 20, help="Optionally specify an output resolution in metres. Defaults to 20 m.")
+    optional.add_argument('-p', '--pol', type=str, metavar = 'POL', default = 'both', help="Optionally specify a single polarisation ('VV' or 'VH') or 'both'. Defaults to processing both.")
+    
     # Get arguments
     args = parser.parse_args()
-
+    
     # Get absolute path of input .safe files.
     args.infiles = [os.path.abspath(i) for i in args.infiles]
 
-    main(args.infiles, args.target_extent, args.epsg, output_dir = args.output_dir, output_name = args.output_name, output_res = args.resolution)
+    main(args.infiles, args.target_extent, args.epsg, output_dir = args.output_dir, output_name = args.output_name, output_res = args.resolution, pol = args.pol)
     
     
