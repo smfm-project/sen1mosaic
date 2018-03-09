@@ -337,13 +337,13 @@ def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), mult
 
     # And for case where only one file is input
     else:
-        infile = preprocess_files[0] + '.dim'
+        infiles_formatted = preprocess_files[0] + '.dim'
         
         outfile = preprocess_files[0] + '_mtl_1t.dim'
         
         single = True
         
-        if verbose: print 'Multilooking %s'%infiles[0]
+        if verbose: print 'Multilooking %s'%infiles_formatted[0]
     
     # Execute Graph Processing Tool
     multilookGraph(infiles_formatted, outfile, multilook, single = single)
@@ -404,33 +404,40 @@ def splitFiles(infiles, max_scenes, overlap = False):
         A list of arrays split into segments of size max_scenes.
     '''
     
-    assert max_scenes > 1, "max_scenes must be > 1, else there won't be multiple scenes for the stiching algorithm"
-    
-    # Get a unique group number
+    assert max_scenes > 0, "max_scenes must be > 0, else there won't be any scenes to process."
+    if overlap: assert max_scenes > 1, "max_scenes must be > 1 if overlap is specified, else there won't be any scenes to overlap."
+
+    # Get a unique group number. A unique number is assigned to each overpass.
     groups = getContiguousImages(infiles)
     
-    # Get overlapping strips of Sentinel-1 data
-    infiles_split = []
+    # Get overlapping strips of Sentinel-1 data, where overlap == True
+    if max_scenes > 1:
+        
+        infiles_split = []
     
-    for group in np.unique(groups):
-        
-        these_infiles = infiles[groups == group]
-        
-        if overlap:
-            n = max_scenes - 1
-        else:
-            n = max_scenes
-        
-        these_infiles_split = [these_infiles[i:i+max_scenes] for i in xrange(0,these_infiles.shape[0], n)]
-    
-        # This catches case where only one overlapping file is included
-        for i in these_infiles_split:
+        for group in np.unique(groups):
             
-            if len(these_infiles_split) > 1 and len(these_infiles_split[-1]) == 1:
-                these_infiles_split = these_infiles_split[:-1]
+            these_infiles = infiles[groups == group]
+            
+            if overlap:
+                n = max_scenes - 1
+            else:
+                n = max_scenes
+            
+            these_infiles_split = [these_infiles[i:i+max_scenes] for i in xrange(0,these_infiles.shape[0], n)]
+            
+            # This catches case where only one overlapping file is included
+            if overlap:
+                for i in these_infiles_split:
+                    if len(these_infiles_split) > 1 and len(these_infiles_split[-1]) == 1:
+                        these_infiles_split = these_infiles_split[:-1]
+            
+            infiles_split.extend(these_infiles_split)
+    
+    else:
         
-        infiles_split.append(these_infiles_split[0])
-     
+        infiles_split = infiles
+        
     return infiles_split
 
 
@@ -463,9 +470,9 @@ if __name__ == '__main__':
     optional = parser.add_argument_group('Optional arguments')
 
     # Required arguments
-    required.add_argument('infiles', metavar='N', type=str, nargs='+', help='Input files. Either specify a valid S1 input file (.zip), or multiple files through wildcards.')
     
     # Optional arguments
+    optional.add_argument('infiles', metavar='N', type=str, default = [os.getcwd()], nargs='*', help='Input files. Specify a valid S1 input file (.zip), multiple files through wildcards, or a directory. Defaults to current working directory.')
     optional.add_argument('-o', '--output_dir', type=str, default = os.getcwd(), help = "Optionally specify an output directory or file. If nothing specified, we'll apply a standard filename and output to the present working directory.")
     optional.add_argument('-t', '--temp_dir', type=str, default = os.getcwd(), help = "Optionally specify a temporary output directory. If nothing specified, we'll output intermediate files to the present working directory.")
     optional.add_argument('-m', '--max_scenes', type=int, default = 3, help = "Optionally specify a maximum number of scenes to stitch in one go. If nothing specified, we'll set this to a default of 3 scenes.")
@@ -475,6 +482,7 @@ if __name__ == '__main__':
     optional.add_argument('-r', '--remove', action = 'store_true', help = "Optionally delete input scenes after processing complete.")
     optional.add_argument('-v', '--verbose', action = 'store_true', help = "Set script to print progress.")
     optional.add_argument('-p', '--n_processes', type = int, metavar = 'N', default = 1, help = "Specify a maximum number of tiles to process in paralell. Bear in mind that more processes will require more memory. Defaults to 1.")
+    optional.add_argument('-ov', '--overlap', action = 'store_true', help = "Overlap scenes by one, which reduces the impact of inter-scene boundaries at the expense of processing time")
 
     # Parse command line arguments    
     args = parser.parse_args()   
@@ -483,12 +491,12 @@ if __name__ == '__main__':
     infiles = _prepInfiles(args.infiles)
     
     # Convert arguments to absolute paths    
-    infiles = np.array(sorted([os.path.abspath(i) for i in args.infiles])) # Also sort, and convert to an array.
+    infiles = np.array(sorted([os.path.abspath(i) for i in infiles])) # Also sort, and convert to an array.
     output_dir = os.path.abspath(args.output_dir)
     temp_dir = os.path.abspath(args.temp_dir)
     
     # Determine which images should be processed together as one contiguous overpass
-    infiles_split = splitFiles(infiles, args.max_scenes)
+    infiles_split = splitFiles(infiles, args.max_scenes, overlap = args.overlap)
     
     # Keep things simple if using one process
     if args.n_processes == 1:

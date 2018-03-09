@@ -64,7 +64,7 @@ def _loadSourceFile(S1_file, pol):
     S1_file = S1_file.rstrip('/')
     
     # Identify source file following the standardised file pattern
-    image_path = glob.glob(S1_file[:-4] + '.data/*_%s.img'%pol)[0]
+    image_path = glob.glob(S1_file[:-4] + '.data/*_%s*.img'%pol)[0]
        
     # Load the image 
     data = gdal.Open(image_path).ReadAsArray()
@@ -182,7 +182,7 @@ def _updateDataArray(data_out, data_resampled, action = 'sum'):
     if action == 'sum':
         data_out += data_resampled
     elif action == 'max':
-        data_out[data_resampled > data_out] = data_resampled[data_resampled > data_out]
+        data_out[data_resampled < data_out] = data_resampled[data_resampled < data_out]
     elif action == 'min':
         data_out[np.logical_or(data_resampled < data_out, data_out == 0)] = data_resampled[np.logical_or(data_resampled < data_out, data_out == 0)]
 
@@ -207,7 +207,7 @@ def getSourceMetadata(S1_file, pol = 'VV'):
     S1_file = S1_file.rstrip('/')
     
     # Find the xml file that contains file metadata
-    input_file = glob.glob(S1_file[:-4] + '.data/*_%s.img'%pol)[0]
+    input_file = glob.glob(S1_file[:-4] + '.data/*_%s*.img'%pol)[0]
         
     ds = gdal.Open(input_file,0)
     geo_t = ds.GetGeoTransform()
@@ -319,7 +319,7 @@ def getFilesInTile(source_files, pol, md_dest):
             do_tile.append(False)
             continue
         
-        if len(glob.glob(S1_file.rstrip('/')[:-4] + '.data/*_%s.img'%pol)) == 0:
+        if len(glob.glob(S1_file.rstrip('/')[:-4] + '.data/*_%s*.img'%pol)) == 0:
             do_tile.append(False)
             continue
         
@@ -451,10 +451,10 @@ def buildVVVH(VV_file, VH_file, output_dir = os.getcwd(), output_name = 'S1_outp
     data_VV = ds_VV.ReadAsArray()
     data_VH = ds_VH.ReadAsArray()
     
-    mask = np.logical_or(data_VV <= 0., data_VH <= 0.)
+    mask = np.logical_or(data_VV == 0., data_VH == 0.)
     
-    data_VV[data_VV<=0] = 0.00001
-    data_VH[data_VH<=0] = 0.00001
+    data_VV[data_VV >= 0] = -0.00001
+    data_VH[data_VH >= 0] = -0.00001
 
     VV_VH = data_VV / data_VH
     
