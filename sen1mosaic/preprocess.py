@@ -90,7 +90,7 @@ def _run_workers(n_processes, jobs):
     except KeyboardInterrupt:
         for worker in workers:
             print 'Keyboard interrupt (ctrl-c) detected. Exiting all processes.'
-            # This is an impolite way to kill sen2cor, but it otherwise does not listen.
+            # This is an impolite way to kill the process, built to circumvent the intransigence of sen2cor.
             parent = psutil.Process(worker.pid)
             children = parent.children(recursive=True)
             parent.send_signal(signal.SIGKILL)
@@ -100,6 +100,46 @@ def _run_workers(n_processes, jobs):
             worker.join()
             
         raise
+
+
+def _runCommand(command, verbose = False):
+    """
+    Function to capture KeyboardInterrupt.
+    Idea from: https://stackoverflow.com/questions/38487972/target-keyboardinterrupt-to-subprocess
+
+    Args:
+        command: A list containing a command for subprocess.Popen().
+    """
+    
+    try:
+        p = None
+
+        # Register handler to pass keyboard interrupt to the subprocess
+        def handler(sig, frame):
+            if p:
+                p.send_signal(signal.SIGINT)
+            else:
+                raise KeyboardInterrupt
+                
+        signal.signal(signal.SIGINT, handler)
+        
+        #p = subprocess.Popen(command)
+        p = subprocess.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+        
+        if verbose:
+            for stdout_line in iter(p.stdout.readline, ""):
+                print stdout_line
+        
+        text = p.communicate()[0]
+                
+        if p.wait():
+            raise Exception('Command failed: %s'%' '.join(command))
+        
+    finally:
+        # Reset handler
+        signal.signal(signal.SIGINT, signal.SIG_DFL)
+    
+    return text.decode('utf-8').split('/n')
 
 
 
@@ -255,8 +295,14 @@ def calibrateGraph(infile, temp_dir = os.getcwd(), short_chain = False, verbose 
         
     if verbose: print 'Pre-processing %s'%infile
     
+    # Prepare command
+    command = [os.path.expanduser('~/snap/bin/gpt'), xmlfile, '-x', '-Pinputfile=%s'%infile, '-Poutputfile=%s'%outfile]
+    
     # Execute chain
-    os.system('~/snap/bin/gpt %s -x -Pinputfile=%s -Poutputfile=%s'%(xmlfile, infile, outfile))    
+    output_text = _runCommand(command, verbose = verbose)
+    
+    # Execute chain
+    #os.system('~/snap/bin/gpt %s -x -Pinputfile=%s -Poutputfile=%s'%(xmlfile, infile, outfile))    
     
     return outfile + '.dim'
 
@@ -278,20 +324,20 @@ def multilookGraph(infiles, multilook = 2, verbose = False):
     if len(infiles) > 1: 
                 
         # Format input files to a string separated by commas
-        infiles_formatted = ".dim,".join(infiles) + ".dim"
+        infiles_formatted = ",".join(infiles)
             
         # Select graph that first reassembles multiple images
-        outfile = infiles[-1] + '_mtl_%st.dim'%str(len(infiles))
+        outfile = infiles[-1][:-4] + '_mtl_%st.dim'%str(len(infiles))
         
         single = False
         
-        if verbose: print 'Multilooking %s'%infiles_formatted
+        if verbose: print 'Multilooking and stitching %s'%infiles_formatted
 
     # And for case where only one file is input
     else:
-        infiles_formatted = preprocess_files[0] + '.dim'
+        infiles_formatted = infiles[0]
         
-        outfile = preprocess_files[0] + '_mtl_1t.dim'
+        outfile = infiles[0][:-4] + '_mtl_1t.dim'
         
         single = True
         
@@ -304,8 +350,13 @@ def multilookGraph(infiles, multilook = 2, verbose = False):
     else:
         xmlfile = os.path.join(os.path.dirname(__file__), '../cfg/2_multilook.xml')
     
+    # Prepare command
+    command = [os.path.expanduser('~/snap/bin/gpt'), xmlfile, '-x', '-Pinputfiles=%s'%infiles_formatted, '-Poutputfile=%s'%outfile, '-Pmultilook=%s'%str(multilook)]
+    
     # Execute chain
-    os.system('~/snap/bin/gpt %s -x -Pinputfiles=%s -Poutputfile=%s -Pmultilook=%s'%(xmlfile, infile, outfile, multilook))
+    output_text = _runCommand(command, verbose = verbose)
+        
+    #os.system('~/snap/bin/gpt %s -x -Pinputfiles=%s -Poutputfile=%s -Pmultilook=%s'%(xmlfile, infiles_formatted, outfile, multilook))
   
     return outfile
 
@@ -335,7 +386,7 @@ def correctionGraph(infile, output_dir = os.getcwd(), multilook = 2, speckle_fil
     # Get extent of input file (for edge correction)
     extent = getExtent(infile, multilook = multilook)
     
-    if verbose: print 'Geometrically correcting %s'%outfile
+    if verbose: print 'Geometrically correcting %s'%infile
     
     if speckle_filter and short_chain:
         xmlfile = os.path.join(os.path.dirname(__file__), '../cfg/3_terrain_correction_filter_short.xml')
@@ -346,10 +397,16 @@ def correctionGraph(infile, output_dir = os.getcwd(), multilook = 2, speckle_fil
     else:
         xmlfile = os.path.join(os.path.dirname(__file__), '../cfg/3_terrain_correction.xml')
     
-    os.system('~/snap/bin/gpt %s -x -Pinputfile=%s -Poutputfile=%s -Pextent=%s'%(xmlfile, infile, outfile, extent))
+    # Prepare command
+    command = [os.path.expanduser('~/snap/bin/gpt'), xmlfile, '-x', '-Pinputfile=%s'%infile, '-Poutputfile=%s'%output_file, '-Pextent=%s'%extent]
+    
+    # Execute chain
+    output_text = _runCommand(command, verbose = verbose)
+    
+    #os.system('~/snap/bin/gpt %s -x -Pinputfile=%s -Poutputfile=%s -Pextent=%s'%(xmlfile, infile, output_file, extent))
     
     
-    return outfile
+    return output_file
 
 
 def getExtent(infile, buffer_size = 1000, multilook = 2):
@@ -463,12 +520,14 @@ def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), mult
     # Tidy up by deleting temporary intermediate files.
     for this_file in preprocess_files:
         if verbose: print 'Removing %s'%this_file
-        os.system('rm %s.dim'%this_file)
-        os.system('rm -r %s.data'%this_file)
+        os.system('rm %s'%this_file)
+        os.system('rm -r %s.data'%this_file[:-4])
             
     if verbose: print 'Removing %s'%outfile[:-4]
     os.system('rm %s'%outfile)
     os.system('rm -r %s.data'%outfile[:-4])
+    
+    if verbose: print 'Done!'
     
     return output_file
 
@@ -576,13 +635,14 @@ if __name__ == '__main__':
     # Required arguments
     
     # Optional arguments
-    optional.add_argument('infiles', metavar = 'N', type = str, default = [os.getcwd()], nargs='*', help='Input files. Specify a valid S1 input file (.zip), multiple files through wildcards, or a directory. Defaults to processing all S1 files in current working directory.')
+    optional.add_argument('infiles', metavar = 'INFILES', type = str, default = [os.getcwd()], nargs='*', help='Input files. Specify a valid S1 input file (.zip), multiple files through wildcards, or a directory. Defaults to processing all S1 files in current working directory.')
     optional.add_argument('-o', '--output_dir', metavar = 'PATH', type = str, default = os.getcwd(), help = "Output directory for processed files. Defaults to current working directory.")
     optional.add_argument('-t', '--temp_dir', metavar = 'PATH', type = str, default = os.getcwd(), help = "Output directory for intermediate files. Defaults to current working directory.")
     optional.add_argument('-m', '--max_scenes', metavar = 'N', type = int, default = 3, help = "Maximum number of scenes from an overpass to reconstitute and process together. Higher values result in fewer output files with fewer artefacts at scene boundaries, but require more RAM. Defaults to 3 scenes.")
     optional.add_argument('-l', '--multilook', metavar = 'N', type = int, default = 2, help = "Multilooking reduces image noise by degrading output resolution from ~10 x 10 m by a factor. Defaults to 2 (~20 x 20 m output).")
     optional.add_argument('-f', '--speckle_filter', action = 'store_true', help = "Apply a speckle filter (Refined Lee) to output images.")
     optional.add_argument('-s', '--short', action = 'store_true', help = "Perform a more rapid processing chain, ommitting some nonessential preprocessing steps.")
+    optional.add_argument('-r', '--remove', action = 'store_true', help = "Delete input files after processing is complete.")
     optional.add_argument('-v', '--verbose', action = 'store_true', help = "Print script progress.")
     optional.add_argument('-p', '--processes', type = int, metavar = 'N', default = 1, help = "Specify a maximum number of tiles to process in paralell. Note: more processes will require more resources. Defaults to 1.")
     #optional.add_argument('-ov', '--overlap', action = 'store_true', help = "Overlap scenes by one, which can be used to corret for artefacts at scene cut points. This requires more storage, and longer ocessing time")
