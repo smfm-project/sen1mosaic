@@ -608,7 +608,7 @@ def main(source_files, extent_dest, EPSG_dest, output_res = 20, pol = 'both', ou
         filenames.append(filename)
         
     # Build VRT output files for straightforward visualisation
-    if verbose: print 'Building .VRT images for visualisation'
+    if verbose: print 'Building .VRT images for visualisation.'
     
     if pol_list.tolist() == ['VV','VH'] or pol_list.tolist() == ['VH', 'VV'] and 'NODATA' not in pol_list:
                 
