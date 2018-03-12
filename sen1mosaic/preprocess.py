@@ -6,7 +6,6 @@ import glob
 import multiprocessing
 import numpy as np
 import os
-from osgeo import gdal
 import signal
 import subprocess
 import sys
@@ -422,6 +421,8 @@ def getExtent(infile, buffer_size = 1000, multilook = 2):
     Returns:
         A string with the new extent to use for this file.
     '''
+    
+    from osgeo import gdal
     
     assert infile[-4:] == '.dim', "The input to getExtent() must be a .dim file. You input %s."%str(infile)
     assert type(buffer_size) == int, "buffer_size must be an integer. You input %s."%str(buffer_size)
