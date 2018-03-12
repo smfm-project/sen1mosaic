@@ -10,10 +10,10 @@ import time
 
 def connectToAPI(username, password):
     '''
-    Connect to the SciHub API with sentinelsat.
+    Connect to the SciHub API with sentinelsat. Sign up at https://scihub.copernicus.eu/.
     
     Args:
-        username: Scihub username. Sign up at https://scihub.copernicus.eu/.
+        username: Scihub username. 
         password: Scihub password.        
     '''
     
@@ -46,13 +46,13 @@ def _buildWkt(search_area):
 
 
 def search(search_area, start = '20140403', end = datetime.datetime.today().strftime('%Y%m%d'), direction= '*'):
-    """
+    """search(search_area, start = '20140403', end = datetime.datetime.today().strftime('%Y%m%d'), direction= '*')
     
     Searches for Sentinel-1 GRD IW images that meet conditions of date range and extent.
     
     Args:
         search_area: A list in the format [minlon, minlat, maxlon, maxlat]
-        start: Start date for search in format YYYYMMDD. Start date may not precede 20161206, the date where the format of Sentinel-2 files was simplified. Defaults to 20140403.
+        start: Start date for search in format YYYYMMDD. Start date may not precede 20140403, the launch date of Sentinel1-. Defaults to 20140403.
         end: End date for search in format YYYYMMDD. Defaults to today's date.
     
     Returns:
@@ -82,7 +82,8 @@ def search(search_area, start = '20140403', end = datetime.datetime.today().strf
 
 
 def removeDuplicates(products_df, data_dir = os.getcwd()):
-    '''
+    '''removeDuplicates(products_df, data_dir = os.getcwd())
+    
     Remove images from search results that have already been downloaded
     
     Args:
@@ -131,16 +132,17 @@ def download(products_df, output_dir = os.getcwd()):
 
 
 def main(username, password, search_area, start, end, output_dir = os.getcwd(), direction = '*'):
-    """
+    """main(username, password, search_area, start, end, output_dir = os.getcwd(), direction = '*')
+    
     Download Sentinel-1 data from the Copernicus Open Access Hub, specifying a particular tile, date ranges and degrees of cloud cover. This is the function that is initiated from the command line.
     
     Args:
         username: Scihub username. Sign up at https://scihub.copernicus.eu/.
         password: Scihub password.
-        tile: A list in the format [minlon, minlat, maxlon, maxlat] defining the search area.
+        search_area: A list in the format [minlon, minlat, maxlon, maxlat] defining the search area.
         start: Start date for search in format YYYYMMDD.
         end: End date for search in format YYYYMMDD.
-        output_dir: Optionally specify an output directory. Defaults to the present working directory.
+        output_dir: Optionally specify an output directory. Defaults to the current working directory.
         direction: Orbital direction (either ASCENDING or DESCENDING). If not specified, both will be considered.
     """
     
@@ -171,12 +173,12 @@ if __name__ == '__main__':
     required.add_argument('-u', '--user', type = str, required = True, help = "Scihub username")
     required.add_argument('-p', '--password', type = str, metavar = 'PASS', required = True, help = "Scihub password")
     required.add_argument('-a', '--search_area', nargs = 4, metavar = ('LONMIN', 'LATMIN', 'LONMAX', 'LATMAX'), type = float, required = True, help = "Extent of search area, in format <lonmin latmin lonmax latmax>.")
-    required.add_argument('-s', '--start', type = str, metavar = 'YYYYMMDD', required = True, help = "Start date for search in format YYYYMMDD..")
+    required.add_argument('-s', '--start', type = str, metavar = 'YYYYMMDD', required = True, help = "Start date for search in format YYYYMMDD.")
     required.add_argument('-e', '--end', type = str, metavar = 'YYYYMMDD', required = True, help = "End date for search in format YYYYMMDD.")    
     
     # Optional arguments
-    optional.add_argument('-o', '--output_dir', type = str, metavar = 'PATH', default = os.getcwd(), help = "Specify an output directory. Defaults to the present working directory.")
-    optional.add_argument('-d', '--direction', type = str, metavar = 'DIRECTION', default = '*', help = "Specify <ASCENDING> or <DESCENDING> if only a single orbital direction should be downloaded. Defaults to downloading both.")
+    optional.add_argument('-o', '--output_dir', type = str, metavar = 'PATH', default = os.getcwd(), help = "Specify an output directory. Defaults to the current working directory.")
+    optional.add_argument('-d', '--direction', type = str, metavar = 'DIR', default = '*', help = "Specify <ASCENDING> or <DESCENDING> if only a single orbital direction should be downloaded. Defaults to downloading both.")
     
     # Get arguments from command line
     args = parser.parse_args()
