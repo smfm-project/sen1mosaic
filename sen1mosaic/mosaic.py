@@ -13,6 +13,42 @@ import pdb
 
 
 
+### Functions for command line interface.
+
+def _prepInfiles(infiles):
+    """
+    Function to identify valid input files for processing chain
+    
+    Args:
+        infiles: A list of input files, directories, or tiles for Sentinel-1 inputs.
+    Returns:
+        A list of all Sentinel-1 .dim files in infiles.
+    """
+    
+    # Get absolute path, stripped of symbolic links
+    infiles = [os.path.abspath(os.path.realpath(infile)) for infile in infiles]
+    
+    # List to collate 
+    infiles_reduced = []
+    
+    for infile in infiles:
+         
+        # Where infile is a directory:
+        infiles_reduced.extend(glob.glob('%s/*.dim'%infile))
+        
+        # Where infile is a .dim file
+        if infile.split('/')[-1].split('.')[-1] == 'dim': infiles_reduced.extend([infile])
+    
+    # Strip repeats (in case)
+    infiles_reduced = list(set(infiles_reduced))
+    
+    # Reduce input files to only Sentinel-1 processed files from preprocess.py
+    infiles_reduced = [infile for infile in infiles_reduced if ('S1_' in infile.split('/')[-1])]
+    
+    return infiles_reduced
+
+
+## Primary functions
 
 def _createOutputArray(md, dtype = np.uint16):
     '''
@@ -32,7 +68,7 @@ def _createOutputArray(md, dtype = np.uint16):
 
 def _sortSourceFiles(source_files):
     '''
-    When building a large mosaic, it's necessary for input tiles to be in a consistent order to avoid strange overlap artefacts. This function sorts a list of files in alphabetical order by their tile reference.
+    When building a large mosaic, it's beest for input tiles to be in a consistent order to avoid strange overlap artefacts. This function sorts a list of files in alphabetical order by their filename.
     
     Args:
         source_files: A list of processed Sentinel-1 files
@@ -41,7 +77,7 @@ def _sortSourceFiles(source_files):
         A list of source_files sorted by date.
     '''
     
-    source_files.sort() #TODO: ensure this is sorted by date
+    source_files.sort()
     
     return source_files
 
@@ -51,14 +87,17 @@ def _loadSourceFile(S1_file, pol):
     Loads a Sentinel-1 pre-processed file of a given polarisation into a numpy array.
     
     Args:
-        S1_file: /path/to/a/ pre-processed S1 file
-        pol: 
+        S1_file: /path/to/a/ pre-processed S1 .dim file
+        pol: Polarisation (either 'VV' or 'VH'
     
     Returns:
         A numpy array.
     '''
     
     from osgeo import gdal
+    
+    assert pol in ['VV', 'VH'], "Polarisation must be either 'VV' or 'VH'."
+    assert S1_file[-4:] == '.dim', "Input file must be a .dim file."
     
     # Remove trailing slash from input filename, if it exists
     S1_file = S1_file.rstrip('/')
@@ -169,7 +208,7 @@ def _updateDataArray(data_out, data_resampled, action = 'sum'):
     Args:
         data_out: A numpy array representing the band data to be output.
         data_resampled: A numpy array containing resampled band data to be added to data_out.
-        action: 
+        action: 'sum', 'min', or 'max', which respectively adds data_resampled to data_out, replaces pixels in data_out with data_resampled where data_resampled < data_out, and replaces pixels in data_out with data_resampled where data_resampled > data_out.
     
     Returns:
         The data_out array with pixels from data_resampled added.
@@ -194,7 +233,7 @@ def getSourceMetadata(S1_file, pol = 'VV'):
     Function to extract georefence info from 
     
     Args:
-        S1_file: 
+        S1_file: A Sentinel-1 .dim file
         pol: Polarisation of an input file to extract metadata from. Defaults to 'VV'.
     Returns:
         A list describing the extent of the file, in the format [xmin, ymin, xmax, ymax].
@@ -202,9 +241,11 @@ def getSourceMetadata(S1_file, pol = 'VV'):
     '''
     
     from osgeo import gdal, osr
-             
+    
     # Remove trailing / from safe files if present 
     S1_file = S1_file.rstrip('/')
+    
+    assert S1_file[-4:] == '.dim', "S1_file must be a .dim file."
     
     # Find the xml file that contains file metadata
     input_file = glob.glob(S1_file[:-4] + '.data/*_%s*.img'%pol)[0]
@@ -240,7 +281,7 @@ def getSourceMetadata(S1_file, pol = 'VV'):
 
 def buildMetadataDictionary(extent_dest, res, EPSG):
     '''
-    Build a metadata dictionary to describe the destination georeference info
+    Build a metadata dictionary to describe the destination georeference info.
     
     Args:
         extent_dest: List desciribing corner coordinate points in destination CRS [xmin, ymin, xmax, ymax]
@@ -285,24 +326,25 @@ def buildMetadataDictionary(extent_dest, res, EPSG):
     return md
 
 
-def getFilesInTile(source_files, pol, md_dest):
-    '''
+def getFilesInTile(source_files, pol, md_dest, verbose = False):
+    """
     Takes a list of source files as input, and determines where each falls within extent of output tile and contains data for input polarisation.
     
     Args:
         source_files: A list of input files.
         pol: Polarisation. Set to either 'VV' or 'VH'.
         md_dest: Dictionary from buildMetaDataDictionary() containing output projection details.
+        verbose: Set True to print progress.
 
     Returns:
         A reduced list of source_files containing only files that will contribute to each tile.
-    '''
+    """
     
     # Sort source files alphabetically by tile reference.    
     source_files = _sortSourceFiles(source_files)
           
     # Determine which L3A images are within specified tile bounds
-    print 'Searching for source files within specified tile...'
+    if verbose: print 'Searching for source files within specified tile...'
     
     do_tile = []
     
@@ -323,7 +365,7 @@ def getFilesInTile(source_files, pol, md_dest):
             do_tile.append(False)
             continue
         
-        print '    Found one: %s'%S1_file
+        if verbose: print '    Found one: %s'%S1_file
         do_tile.append(True)
     
     # Get subset of source_files in specified tile
@@ -332,42 +374,43 @@ def getFilesInTile(source_files, pol, md_dest):
     return source_files_tile
 
 
-def generateDataArray(source_files, pol, md_dest, output_dir = os.getcwd(), output_name = 'S1_output'):
-    """
+def generateDataArray(source_files, pol, md_dest, output_dir = os.getcwd(), output_name = 'S1_output', verbose = False):
+    """generateDataArray(source_files, pol, md_dest, output_dir = os.getcwd(), output_name = 'S1_output', verbose = False)
     
     Function which generates an output GeoTiff file from list of pre-processed S1 source files for a specified output polarisation and extent.
 
     Args:
         source_files: A list of pre-processed S1 input files.
-        pol: 
+        pol: Polarisation to process ('VV' or 'VH')
         md_dest: Dictionary from buildMetaDataDictionary() containing output projection details.
-        output_dir: Optionally specify directory for output file. Defaults to current working directory.
-        output_name: Optionally specify a string to prepend to output files. Defaults to 'L3B_output'.
+        output_dir: Directory to write output files. Defaults to current working directory.
+        output_name: Optionally specify a string to prepend to output files. Defaults to 'S1_output'.
         
     Returns:
-        A numpy array containing mosaic data for the input band.
-        A string of the filename it's saved to.
+        A string with the filename pattern. Returns 'NODATA' where not valid input images.
     """
     
-    # Create array to contain output array for this band
+    # Create array to contain output array for this band. Together these arrays are used to calculate the mean, min, max and standard deviation of input images.
     data_num = _createOutputArray(md_dest, dtype = np.int16) # To track number of images for calculating mean
     data_sum = _createOutputArray(md_dest, dtype = np.float32) # To track sum of input images
-    data_var = _createOutputArray(md_dest, dtype = np.float32) # To track sum of variance of input images for calculating standard deviation
+    data_var = _createOutputArray(md_dest, dtype = np.float32) # To track sum of variance of input images
     data_min = _createOutputArray(md_dest, dtype = np.float32) # To track sum of max value of input images
     data_max = _createOutputArray(md_dest, dtype = np.float32) # To track sum of min value of input images
     
-    data_date = _createOutputArray(md_dest, dtype = np.float32) # To add new data for each date (taking max value forward)
+    data_date = _createOutputArray(md_dest, dtype = np.float32) # Data from each image
     
     # Reduce the pool of source_files to only those that overlap with output tile.
-    source_files_tile = getFilesInTile(source_files, pol, md_dest)
+    source_files_tile = getFilesInTile(source_files, pol, md_dest, verbose = verbose)
         
     # It's only worth processing anything if at least one input image is inside tile
-    assert len(source_files_tile) >= 1, "No data inside specified tile for polarisation %s. Not processing this tile."%pol
+    if len(source_files_tile) == 0:
+        print "No data inside specified tile for polarisation %s. Not processing this tile."%pol
+        return 'NODATA'
                 
     # For each source file
     for n, source_file in enumerate(source_files_tile):
         
-        print '    Adding pixels from %s'%source_file.split('/')[-1]
+        if verbose: print '    Adding pixels from %s'%source_file.split('/')[-1]
                
         # Get source file metadata
         extent_source, res, EPSG_source, date = getSourceMetadata(source_file)
@@ -411,9 +454,11 @@ def generateDataArray(source_files, pol, md_dest, output_dir = os.getcwd(), outp
     data_num = _updateDataArray(data_num, (data_date != 0) * 1, action = 'sum')
     data_sum = _updateDataArray(data_sum, data_date, action = 'sum')
     data_var = _updateDataArray(data_var, data_date ** 2, action = 'sum')
-
+    data_min = _updateDataArray(data_min, data_date, action = 'min')
+    data_max = _updateDataArray(data_max, data_date, action = 'max')
+    
     # Get rid of zeros in cases of no data
-    data_num[data_num==0] = 1 
+    data_num[data_num==0] = 1
     
     # Calculate mean of input data
     data_mean = data_sum / data_num.astype(np.float32)
@@ -425,13 +470,14 @@ def generateDataArray(source_files, pol, md_dest, output_dir = os.getcwd(), outp
     data_std[data_std < 0] = 0.
     data_std = np.sqrt(data_std)
     
-    print 'Outputting polarisation %s'%pol
+    if verbose: print 'Outputting polarisation %s'%pol
     
+    # Generate default output filename
     filename = '%s/%s_%s_%s_R%sm.tif'%(output_dir, output_name, '%s', pol, str(md_dest['res']))
     
-    # Output files
+    # Output files (mean, stdev, max, min)
     ds_out = _createGdalDataset(md_dest, data_out = data_mean, filename = filename%'mean', driver='GTiff', dtype = 6, options = ['COMPRESS=LZW'])
-    ds_out = _createGdalDataset(md_dest, data_out = data_std, filename = filename%'stdev', driver='GTiff', dtype = 6, options = ['COMPRESS=LZW'])
+    ds_out = _createGdalDataset(md_dest, data_out = data_std, filename = filename%'stdev', driver='GTiff', dtype = 6, options = ['COMPRESS=LZW'])    
     ds_out = _createGdalDataset(md_dest, data_out = data_max, filename = filename%'max', driver='GTiff', dtype = 6, options = ['COMPRESS=LZW'])
     ds_out = _createGdalDataset(md_dest, data_out = data_min, filename = filename%'min', driver='GTiff', dtype = 6, options = ['COMPRESS=LZW'])
 
@@ -439,12 +485,23 @@ def generateDataArray(source_files, pol, md_dest, output_dir = os.getcwd(), outp
 
 
 def buildVVVH(VV_file, VH_file, output_dir = os.getcwd(), output_name = 'S1_output'):
-    '''
-    '''
+    """buildVVVH(VV_file, VH_file, output_dir = os.getcwd(), output_name = 'S1_output')
+    
+    Function to build a VV/VH array and output to GeoTiff.
+    
+    Args:
+        VV_file: Path to a VV output Geotiff
+        VH_file: Path to a VH output Geotiff
+        output_dir: Directory to write output files. Defaults to current working directory.
+        output_name: Optionally specify a string to prepend to output files. Defaults to 'S1_output'.
+    
+    Returns:
+        Path to VV/VH GeoTiff
+    """
 
     from osgeo import gdal
     
-              
+    # Load datasets
     ds_VV = gdal.Open(VV_file,0)
     ds_VH = gdal.Open(VH_file,0)
     
@@ -460,7 +517,7 @@ def buildVVVH(VV_file, VH_file, output_dir = os.getcwd(), output_name = 'S1_outp
     
     VV_VH[mask] = 0.
         
-    # Output
+    # Output to GeoTiff
     res = str(int(round(ds_VV.GetGeoTransform()[1])))
     filename = '%s/%s_%s_VVVH_R%sm.tif'%(output_dir, output_name, 'mean', res)
     
@@ -503,10 +560,8 @@ def buildVRT(red_band, green_band, blue_band, output_path):
 
     
 
-def main(source_files, extent_dest, EPSG_dest, output_res = 10,
-    pol = 'both',
-    output_dir = os.getcwd(), output_name = 'S1_output'):
-    """
+def main(source_files, extent_dest, EPSG_dest, output_res = 20, pol = 'both', output_dir = os.getcwd(), output_name = 'S1_output', verbose = False):
+    """main(source_files, extent_dest, EPSG_dest, output_res = 20, pol = 'both', output_dir = os.getcwd(), output_name = 'S1_output', verbose = False)
     
     Function to run through the entire chain for converting output of sen2Three into custom mosaics. This is the function that is initiated from the command line.
     
@@ -514,24 +569,26 @@ def main(source_files, extent_dest, EPSG_dest, output_res = 10,
         source_files: A list of level 3A input files.
         extent_dest: List desciribing corner coordinate points in destination CRS [xmin, ymin, xmax, ymax].
         EPSG_dest: EPSG code of destination coordinate reference system. Must be a UTM projection. See: https://www.epsg-registry.org/ for codes.
-        output_res: Optionally specify a value for pixel size in m. Defaults to 10 m.
-        pol_list: Optionally specify a list containing desired polarisations (e.g. ['VV'], or ['VV','VH'].). Defaults to ['VV','VH'].
-        output_dir: Optionally specify an output directory.
+        output_res: Optionally specify a value for pixel size in m. Defaults to 20 m.
+        pol: Optionally specify a polarisation ('VV' or 'VH'), or process 'both'. Defaults to 'both'.
+        output_dir: Optionally specify an output directory. Defaults to current working directory.
         output_name: Optionally specify a string to precede output file names. Defaults to 'S1_output'
+        verbose: Set True to print progress.
+
     """
        
     assert len(extent_dest) == 4, "Output extent must be specified in the format [xmin, ymin, xmax, ymax]"
     assert len(source_files) >= 1, "No source files in specified location."
     assert pol in ['VV', 'VH', 'both'], "Polarisation must be set to 'VV', 'VH' or 'both'. You input %s."%str(pol)
     
+    # Remove trailing / from output directory if present 
+    output_dir = output_dir.rstrip('/')
+    
     # Convert band and res list to numpy arrays for indexing
     if pol == 'both':
         pol_list = np.array(['VV', 'VH'])
     else:
         pol_list = np.array([pol])
-    
-    # Remove trailing / from output directory if present 
-    output_dir = output_dir.rstrip('/')
     
     # Build a dictionary with output projection metadata
     md_dest = buildMetadataDictionary(extent_dest, output_res, EPSG_dest)    
@@ -542,19 +599,19 @@ def main(source_files, extent_dest, EPSG_dest, output_res = 10,
     # Process images for each polarisation
     for pol in pol_list:
         
-        print 'Doing polarisation %s'%pol
+        if verbose: print 'Doing polarisation %s'%pol
                 
-        # Using image_n, combine pixels into outputs images for each band
-        filename = generateDataArray(source_files, pol, md_dest, output_dir = output_dir, output_name = output_name)
+        # Combine pixels into output images for each band
+        filename = generateDataArray(source_files, pol, md_dest, output_dir = output_dir, output_name = output_name, verbose = verbose)
         
         # Keep track of output filenames
         filenames.append(filename)
         
     # Build VRT output files for straightforward visualisation
-    print 'Building .VRT images for visualisation'
+    if verbose: print 'Building .VRT images for visualisation'
     
-    if pol_list.tolist() == ['VV','VH'] or pol_list.tolist() == ['VH', 'VV']:
-        
+    if pol_list.tolist() == ['VV','VH'] or pol_list.tolist() == ['VH', 'VV'] and 'NODATA' not in pol_list:
+                
         # Build a VV/VH image
         filename_VVVH = buildVVVH(filenames[pol_list.tolist().index('VV')]%'mean', filenames[pol_list.tolist().index('VH')]%'mean', output_dir = output_dir, output_name = output_name)
         
@@ -565,36 +622,41 @@ def main(source_files, extent_dest, EPSG_dest, output_res = 10,
         # Build an alternative false colour composite image
         buildVRT(filenames[pol_list.tolist().index('VV')]%'min', filenames[pol_list.tolist().index('VH')]%'min', filenames[pol_list.tolist().index('VV')]%'stdev','%s/%s_FCC2.vrt'%(output_dir, output_name))
     
-    print 'Processing complete!'
+    if verbose: print 'Processing complete!'
 
 
 
 if __name__ == "__main__":
     
     # Set up command line parser
-    parser = argparse.ArgumentParser(description = "Process Sentinel-1 data into mosaicked tiles. This script mosaics Sentinel-1 data into a customisable grid square, based on specified UTM coordinate bounds. Files are output as GeoTiffs.")
+    parser = argparse.ArgumentParser(description = "Collate preprocessed Sentinel-1 data into mosaicked tiles. This script mosaics Sentinel-1 data into a customisable grid square, based on specified UTM coordinate bounds. Files are output as GeoTiffs of mean, min, max, and standard deviation of each available backscatter.")
 
     parser._action_groups.pop()
     required = parser.add_argument_group('required arguments')
     optional = parser.add_argument_group('optional arguments')
 
     # Required arguments
-    required.add_argument('infiles', metavar = 'S1_FILES', type = str, nargs = '+', help = 'Sentinel-1 processed input files in .dim format. Specify a valid S1 input file or multiple files through wildcards (e.g. PATH/TO/*.dim).')
     required.add_argument('-te', '--target_extent', nargs = 4, metavar = ('XMIN', 'YMIN', 'XMAX', 'YMAX'), type = float, help = "Extent of output image tile, in format <xmin, ymin, xmax, ymax>.")
     required.add_argument('-e', '--epsg', type=int, help="EPSG code for output image tile CRS. This must be UTM. Find the EPSG code of your output CRS as https://www.epsg-registry.org/.")
 
     # Optional arguments
-    optional.add_argument('-o', '--output_dir', type=str, metavar = 'DIR', default = os.getcwd(), help="Optionally specify an output directory. If nothing specified, downloads will output to the present working directory, given a standard filename.")
+    optional.add_argument('infiles', metavar = 'S1_FILES', type = str, default = [os.getcwd()], nargs = '*', help = 'Input files from preprocess.py. Specify a valid S1 input file (.dim), multiple files through wildcards, or a directory. Defaults to processing all S1 files in current working directory.')
+    optional.add_argument('-r', '--resolution', type = int, metavar = 'RES', default = 20, help=  "Output resolution in metres. Defaults to 20 m.")
+    optional.add_argument('-o', '--output_dir', type = str, metavar = 'PATH', default = os.getcwd(), help = "Output directory. If nothing specified, downloads will output to the present working directory, given a standard filename.")
     optional.add_argument('-n', '--output_name', type=str, metavar = 'NAME', default = 'S1_output', help="Optionally specify a string to precede output filename.")
-    optional.add_argument('-r', '--resolution', type=int, metavar = 'RES', default = 20, help="Optionally specify an output resolution in metres. Defaults to 20 m.")
-    optional.add_argument('-p', '--pol', type=str, metavar = 'POL', default = 'both', help="Optionally specify a single polarisation ('VV' or 'VH') or 'both'. Defaults to processing both.")
-    
+    optional.add_argument('-p', '--pol', type=str, metavar = 'POL', default = 'both', help="Specify a single polarisation ('VV' or 'VH') or 'both'. Defaults to processing both.")
+    optional.add_argument('-v', '--verbose', action = 'store_true', help = "Print script progress.")
+
     # Get arguments
     args = parser.parse_args()
     
-    # Get absolute path of input .safe files.
-    args.infiles = [os.path.abspath(i) for i in args.infiles]
+    # Extract all eligible input files (.dim, or directory containing .dim)
+    infiles = _prepInfiles(args.infiles)
+    
+    # Convert arguments to absolute paths    
+    infiles = sorted([os.path.abspath(i) for i in infiles])
+    output_dir = os.path.abspath(args.output_dir)
 
-    main(args.infiles, args.target_extent, args.epsg, output_dir = args.output_dir, output_name = args.output_name, output_res = args.resolution, pol = args.pol)
+    main(infiles, args.target_extent, args.epsg, output_dir = output_dir, output_name = args.output_name, output_res = args.resolution, pol = args.pol, verbose = args.verbose)
     
     
