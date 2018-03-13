@@ -127,6 +127,7 @@ def _createGdalDataset(md, data_out = None, filename = '', driver = 'MEM', dtype
     Returns:
         A GDAL dataset.
     '''
+    
     from osgeo import gdal
     
     gdal_driver = gdal.GetDriverByName(driver)
@@ -617,10 +618,10 @@ def main(source_files, extent_dest, EPSG_dest, output_res = 20, pol = 'both', ou
         
         # Build a false colour composite image
         # False colour image (VV, VH, VV/VH)
-        buildVRT(filenames[pol_list.tolist().index('VV')]%'mean', filenames[pol_list.tolist().index('VH')]%'mean', filename_VVVH,'%s/%s_FCC.vrt'%(output_dir, output_name))
+        buildVRT(filenames[pol_list.tolist().index('VV')]%'mean', filenames[pol_list.tolist().index('VH')]%'mean', filename_VVVH,'%s/%s_VVmean_VHmean_VVVH_R%s.vrt'%(output_dir, output_name, str(res)))
         
         # Build an alternative false colour composite image
-        buildVRT(filenames[pol_list.tolist().index('VV')]%'min', filenames[pol_list.tolist().index('VH')]%'min', filenames[pol_list.tolist().index('VV')]%'stdev','%s/%s_FCC2.vrt'%(output_dir, output_name))
+        buildVRT(filenames[pol_list.tolist().index('VV')]%'min', filenames[pol_list.tolist().index('VH')]%'min', filenames[pol_list.tolist().index('VV')]%'stdev','%s/%s_VVmin_VHmin_VVstdev_R%s.vrt'%(output_dir, output_name, str(res)))
     
     if verbose: print 'Processing complete!'
 
