@@ -8,7 +8,7 @@ Welcome to sen1mosaic's documentation!
 
 This is a set of tools to aid in the production of large-scale seasonal mosaic products from Sentinel-1 data.
 
-Building large-scale mosaics of Sentinel-1 data for land cover mapping is difficult, with existing tools still under-development and hard to use. The goal of these tools to streamline this processing chain with a set of straightforward command line tools.
+Building large-scale mosaics of Sentinel-1 data for land cover mapping is more difficult than with more commonly-used optical data (e.g. Landsat), with existing tools still under-development and hard to use. The goal of this repository is to streamline this processing chain with a set of straightforward command line tools.
 
 This repository contains three command-line based scripts to perform the following tasks:
 

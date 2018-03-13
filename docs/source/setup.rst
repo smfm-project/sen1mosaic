@@ -9,7 +9,7 @@ This toolset is written for use in Linux.
 You will need access to a PC or server with at least:
 
 * 8 GB of RAM to run SNAP.
-* ~ 32 GB of RAM to combine images into a mosaic tile.
+* 8+ GB of RAM to combine images into a mosaic tile (depending on resolution/extent).
 
 Installing Anaconda Python
 --------------------------
@@ -29,7 +29,7 @@ Once complete, you'll need to add this version of Python to your .bashrc file as
 .. code-block:: console
     
     # Substitute root for the path to your system's installation and .bashrc file.
-    echo 'export PATH="/root/anaconda2/bin:$PATH"' >> /root/.bashrc
+    echo 'export PATH="~/anaconda2/bin:$PATH"' >> ~/.bashrc
     exec -l $SHELL
 
 
@@ -57,7 +57,7 @@ To install SNAP, open a terminal window, change directory to the location you'd 
     wget http://step.esa.int/downloads/5.0/installers/esa-snap_sentinel_unix_5_0.sh
     bash esa-snap_sentinel_unix_5_0.sh
     
-...and follow the instructions.
+...and follow the instructions. The default installation instructions should work fine with sen1mosaic.
 
 For further details and up-to-date installation instructions, see the `SNAP website <http://step.esa.int/main/toolboxes/snap/>`_.
 
