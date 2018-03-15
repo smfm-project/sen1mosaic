@@ -360,12 +360,13 @@ def multilookGraph(infiles, multilook = 2, verbose = False):
     return outfile
 
 
-def correctionGraph(infile, output_dir = os.getcwd(), multilook = 2, speckle_filter = False, short_chain = False, verbose = False):
+def correctionGraph(infile, outfile, output_dir = os.getcwd(), multilook = 2, speckle_filter = False, short_chain = False, verbose = False):
     """
     Perform radiometic/geometric terrain correction and filtering.
     
     Args:
         infile: Input file from multilookGraph() function.
+        outfile: An output filename from _generateOutputFilename() function.
         output_dir: Output directory. Defaults to current working directory.
         multilook: Multilook integer. Should be set to the same as multilookGraph(). Defaults to 2.
         speckle_filter: Set True to include a Refined Lee speckle filter.
@@ -380,7 +381,7 @@ def correctionGraph(infile, output_dir = os.getcwd(), multilook = 2, speckle_fil
     output_dir = '%s/'%output_dir.rstrip('/')
     
     # Build an output filename
-    output_file = '%s%s'%(output_dir, _generateOutputFilename(infiles))
+    output_file = '%s%s'%(output_dir, outfile)
     
     # Get extent of input file (for edge correction)
     extent = getExtent(infile, multilook = multilook)
@@ -507,16 +508,16 @@ def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), mult
     for infile in infiles:
                                     
         # Execute Graph Processing Tool
-        outfile = calibrateGraph(infile, temp_dir = temp_dir, short_chain = short_chain, verbose = verbose)
+        cal_file = calibrateGraph(infile, temp_dir = temp_dir, short_chain = short_chain, verbose = verbose)
         
         # Keep a record of which files have already been processed for each pass
-        preprocess_files.append(outfile)
+        preprocess_files.append(cal_file)
 
     # Step 2: Perform multilooking. Execute Graph Processing Tool
-    outfile = multilookGraph(preprocess_files, multilook = multilook, verbose = verbose)
+    mtl_file = multilookGraph(preprocess_files, multilook = multilook, verbose = verbose)
     
     # Step 3: Perform geometric correction. Execute Graph Processing Tool
-    output_file = correctionGraph(outfile, output_dir = output_dir, speckle_filter = speckle_filter, short_chain = short_chain, multilook = multilook, verbose = verbose)
+    output_file = correctionGraph(mtl_file, _generateOutputFilename(infiles), output_dir = output_dir, speckle_filter = speckle_filter, short_chain = short_chain, multilook = multilook, verbose = verbose)
     
     # Tidy up by deleting temporary intermediate files.
     for this_file in preprocess_files:
@@ -524,9 +525,9 @@ def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), mult
         os.system('rm %s'%this_file)
         os.system('rm -r %s.data'%this_file[:-4])
             
-    if verbose: print 'Removing %s'%outfile[:-4]
-    os.system('rm %s'%outfile)
-    os.system('rm -r %s.data'%outfile[:-4])
+    if verbose: print 'Removing %s'%mtl_file[:-4]
+    os.system('rm %s'%mtl_file)
+    os.system('rm -r %s.data'%mtl_file[:-4])
     
     if verbose: print 'Done!'
     
@@ -609,9 +610,12 @@ def main(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), multilook = 
     
     # Test that output file has been generated correctly.
     if testCompletion(output_file, output_dir = output_dir) == False:
-        print 'WARNING: %s does not appear to have completed processing successfully.'%infile
+        for i in infiles:
+            print 'WARNING: %s does not appear to have completed processing successfully.'%i
     
     else:
+        for i in infiles:
+            print 'File %s processed successfully'%i
         # Remove input file where requested.
         if remove:
             removeInput(infiles)
