@@ -504,15 +504,15 @@ def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), mult
                 
     # Step 1: Run calibration SNAP processing chain
     preprocess_files = []
-    
+        
     for infile in infiles:
-                                    
+                   
         # Execute Graph Processing Tool
         cal_file = calibrateGraph(infile, temp_dir = temp_dir, short_chain = short_chain, verbose = verbose)
         
         # Keep a record of which files have already been processed for each pass
         preprocess_files.append(cal_file)
-
+    
     # Step 2: Perform multilooking. Execute Graph Processing Tool
     mtl_file = multilookGraph(preprocess_files, multilook = multilook, verbose = verbose)
     
@@ -672,7 +672,7 @@ if __name__ == '__main__':
         for input_files in infiles_split:
         
             # Execute module
-            main(args.infiles, output_dir = args.output_dir, temp_dir = args.temp_dir, multilook = args.multilook, speckle_filter = args.speckle_filter, short_chain = args.short, remove = args.remove, verbose = args.verbose)
+            main(input_files, output_dir = args.output_dir, temp_dir = args.temp_dir, multilook = args.multilook, speckle_filter = args.speckle_filter, short_chain = args.short, remove = args.remove, verbose = args.verbose)
     
     else:
         
