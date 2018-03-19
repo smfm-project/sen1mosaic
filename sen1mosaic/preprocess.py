@@ -300,9 +300,6 @@ def calibrateGraph(infile, temp_dir = os.getcwd(), short_chain = False, verbose 
     # Execute chain
     output_text = _runCommand(command, verbose = verbose)
     
-    # Execute chain
-    #os.system('~/snap/bin/gpt %s -x -Pinputfile=%s -Poutputfile=%s'%(xmlfile, infile, outfile))    
-    
     return outfile + '.dim'
 
 
@@ -354,9 +351,7 @@ def multilookGraph(infiles, multilook = 2, verbose = False):
     
     # Execute chain
     output_text = _runCommand(command, verbose = verbose)
-        
-    #os.system('~/snap/bin/gpt %s -x -Pinputfiles=%s -Poutputfile=%s -Pmultilook=%s'%(xmlfile, infiles_formatted, outfile, multilook))
-  
+      
     return outfile
 
 
@@ -403,21 +398,22 @@ def correctionGraph(infile, outfile, output_dir = os.getcwd(), multilook = 2, sp
     # Execute chain
     output_text = _runCommand(command, verbose = verbose)
     
-    #os.system('~/snap/bin/gpt %s -x -Pinputfile=%s -Poutputfile=%s -Pextent=%s'%(xmlfile, infile, output_file, extent))
-    
-    
     return output_file
 
 
-def getExtent(infile, buffer_size = 1000, multilook = 2):
+def getExtent(infile, buffer_size = 1000, multilook = 2, correct = True):
     '''
     Occasional border artifacts are left in Sentinel-1 data in the range direction. We remove pixels from each edge of the image to catch these. To perform this operation, we must get the extent of the image. This does waste data, but must remain until SNAP/Sentinel-1 data formats are consistent.
     
     # See also: http://forum.step.esa.int/t/grd-border-noise-removal-over-ocean-areas/1582/13
     
+    There also exist artefacts in the azimuth direction at the start and end of data takes. We also remove pixels from the image where we detect that this anomalies are present at the top or bottom edge of an image.
+    
     Args:
         infile: /path/to/the/Sentinel-1.dim file
         buffer_size: Number of pixels to remove from range direction.
+        multilook: Multilook integer, necessary for generating an appropriate buffer
+        correct: Perform correction. Set to False to skip corrections.
     
     Returns:
         A string with the new extent to use for this file.
@@ -429,15 +425,33 @@ def getExtent(infile, buffer_size = 1000, multilook = 2):
     assert type(buffer_size) == int, "buffer_size must be an integer. You input %s."%str(buffer_size)
     assert type(multilook) == int, "multilook must be an integer. You input %s."%str(multilook)
         
-    filename = sorted(glob.glob(infile[:-4] + '.data/*.img'))[0]
+    filename = sorted(glob.glob(infile[:-4] + '.data/*VV.img'))[0]
     
-    # Reduce buffer_size in line with degree of multilooking
-    buffer_size = int(round(float(buffer_size) / float(multilook)))
     
+    # Load data
     ds = gdal.Open(filename,0)
+    data = ds.ReadAsArray()
+
+    extent = [0, 0, ds.RasterXSize, ds.RasterYSize]
     
-    # Multiply the second buffer size by two to account for the extent removed by the first buffer_size
-    extent = buffer_size, 0, ds.RasterXSize - (buffer_size * 2), ds.RasterYSize
+    if correct:
+        
+        # Reduce buffer_size in line with degree of multilooking
+        buffer_size = int(round(float(buffer_size) / float(multilook)))
+    
+        # Multiply the second buffer size by two to account for the extent removed by the first buffer_size
+        extent[0] = buffer_size
+        extent[2] = extent[2] - (buffer_size * 2)
+        
+        # Find if the first or last row is greater than half 0. If so, assume this is the start or end of a data take and remove buffer
+        
+        # Top of image
+        if np.sum(data[-1,:] == 0) > np.sum(data[-1,:] != 0): 
+            extent[3] = extent[3] - buffer_size
+    
+        # Bottom of image
+        if np.sum(data[0,:] == 0) > np.sum(data[0,:] != 0):
+            extent[1] = extent[1] + buffer_size
     
     return ','.join([str(i) for i in extent])
 
@@ -519,6 +533,7 @@ def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), mult
     # Step 3: Perform geometric correction. Execute Graph Processing Tool
     output_file = correctionGraph(mtl_file, _generateOutputFilename(infiles), output_dir = output_dir, speckle_filter = speckle_filter, short_chain = short_chain, multilook = multilook, verbose = verbose)
     
+    
     # Tidy up by deleting temporary intermediate files.
     for this_file in preprocess_files:
         if verbose: print 'Removing %s'%this_file
@@ -528,6 +543,7 @@ def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), mult
     if verbose: print 'Removing %s'%mtl_file[:-4]
     os.system('rm %s'%mtl_file)
     os.system('rm -r %s.data'%mtl_file[:-4])
+    
     
     if verbose: print 'Done!'
     
