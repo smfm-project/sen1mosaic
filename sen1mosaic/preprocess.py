@@ -663,14 +663,16 @@ if __name__ == '__main__':
     optional.add_argument('-o', '--output_dir', metavar = 'PATH', type = str, default = os.getcwd(), help = "Output directory for processed files. Defaults to current working directory.")
     optional.add_argument('-on', '--output_name', metavar = 'STR', type = str, default = 'processed', help = "String to be included in output filenames for identification. Defaults to 'processed'.")
     optional.add_argument('-t', '--temp_dir', metavar = 'PATH', type = str, default = os.getcwd(), help = "Output directory for intermediate files. Defaults to current working directory.")
-    optional.add_argument('-m', '--max_scenes', metavar = 'N', type = int, default = 3, help = "Maximum number of scenes from an overpass to reconstitute and process together. Higher values result in fewer output files with fewer artefacts at scene boundaries, but require more RAM. Defaults to 3 scenes.")
-    optional.add_argument('-l', '--multilook', metavar = 'N', type = int, default = 2, help = "Multilooking reduces image noise by degrading output resolution from ~10 x 10 m by a factor. Defaults to 2 (~20 x 20 m output).")
+    optional.add_argument('-ms', '--max_scenes', metavar = 'N', type = int, default = 3, help = "Maximum number of scenes from an overpass to reconstitute and process together. Higher values result in fewer output files with fewer artefacts at scene boundaries, but require more RAM. Defaults to 3 scenes.")
+    optional.add_argument('-m', '--multilook', metavar = 'N', type = int, default = 2, help = "Multilooking reduces image noise by degrading output resolution from ~10 x 10 m by a factor. Defaults to 2 (~20 x 20 m output).")
     optional.add_argument('-f', '--speckle_filter', action = 'store_true', help = "Apply a speckle filter (Refined Lee) to output images.")
     optional.add_argument('-s', '--short', action = 'store_true', help = "Perform a more rapid processing chain, ommitting some nonessential preprocessing steps.")
     optional.add_argument('-r', '--remove', action = 'store_true', help = "Delete input files after processing is complete.")
     optional.add_argument('-v', '--verbose', action = 'store_true', help = "Print script progress.")
     optional.add_argument('-p', '--processes', type = int, metavar = 'N', default = 1, help = "Specify a maximum number of tiles to process in paralell. Note: more processes will require more resources. Defaults to 1.")
+
     #optional.add_argument('-ov', '--overlap', action = 'store_true', help = "Overlap scenes by one, which can be used to corret for artefacts at scene cut points. This requires more storage, and longer ocessing time")
+
 
     # Parse command line arguments    
     args = parser.parse_args()   
