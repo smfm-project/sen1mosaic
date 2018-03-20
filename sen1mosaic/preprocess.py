@@ -674,7 +674,7 @@ if __name__ == '__main__':
 
     # Parse command line arguments    
     args = parser.parse_args()   
-    pdb.set_trace()
+    
     # Extract all eligible input files (.zip, or directory containing .zip)
     infiles = _prepInfiles(args.infiles)
     
