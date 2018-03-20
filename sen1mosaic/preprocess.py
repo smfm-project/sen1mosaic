@@ -248,7 +248,7 @@ def splitFiles(infiles, max_scenes, overlap = False):
             else:
                 n = max_scenes
             
-            these_infiles_split = [these_infiles[i:i+max_scenes] for i in xrange(0,these_infiles.shape[0], n)]
+            these_infiles_split = [these_infiles[i:i+max_scenes].tolist() for i in xrange(0,these_infiles.shape[0], n)]
             
             # This catches case where only one overlapping file is included
             if overlap:
@@ -260,7 +260,7 @@ def splitFiles(infiles, max_scenes, overlap = False):
     
     else:
         
-        infiles_split = infiles
+        infiles_split = [[infile] for infile in infiles]
         
     return infiles_split
 
@@ -516,10 +516,10 @@ def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), mult
     Returns:
         The path to the output file.
     '''
-                
+                    
     # Step 1: Run calibration SNAP processing chain
     preprocess_files = []
-        
+    
     for infile in infiles:
                    
         # Execute Graph Processing Tool
