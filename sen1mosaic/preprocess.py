@@ -478,7 +478,7 @@ def _getMetaData(infile):
     return md
 
 
-def _generateOutputFilename(infiles):
+def _generateOutputFilename(infiles, output_name = 'processed'):
     """
     Generate an output filename.
     
@@ -493,13 +493,13 @@ def _generateOutputFilename(infiles):
     md_start = _getMetaData(infiles[0])
     md_end = _getMetaData(infiles[-1])
     
-    output_filename = 'S1_preprocessed_%s_%s_%s_%s_%s'%(md_start['date'], md_start['starttime'], md_end['endtime'], md_start['orbit'], md_start['datatake'])
+    output_filename = 'S1_%s_%s_%s_%s_%s_%s'%(output_name, md_start['date'], md_start['starttime'], md_end['endtime'], md_start['orbit'], md_start['datatake'])
     
     return output_filename
 
 
-def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), multilook = 2, speckle_filter = False, short_chain = False, verbose = False):
-    '''processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), multilook = 2, speckle_filter = False, short_chain = False, verbose = False)
+def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), multilook = 2, output_name = 'processed', speckle_filter = False, short_chain = False, verbose = False):
+    '''processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), multilook = 2, output_name = 'processed', speckle_filter = False, short_chain = False, verbose = False)
     
     A function to pre-process one or more Sentinel-1 IW GRD images in preparation for mosaicking with the SNAP Graph Processing Tool. Images are processed in three steps: 1) Calibration, 2) Reassembly into a single image (if >1 image used from an overpass) and multilookng, and 3) Radiometric/geometric terrain correction.
     
@@ -508,6 +508,7 @@ def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), mult
         output_dir: Directory for output .dim/.data files. Defaults to current working directory.
         temp_dir: Directory to output temporary files. Defaults to current working directory.
         multilook: Multilook integer. Defaults to 2.
+        output_name: Name to put in output files for identification. Defaults to 'processed'.
         speckle_filter: Set True to include a Refined Lee speckle filter.
         short_chain: Set True to run a shorter processing chain that omits some optional preprocessing steps at the expense of output quality.
         verbose: Set True to print progress.
@@ -531,7 +532,7 @@ def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), mult
     mtl_file = multilookGraph(preprocess_files, multilook = multilook, verbose = verbose)
     
     # Step 3: Perform geometric correction. Execute Graph Processing Tool
-    output_file = correctionGraph(mtl_file, _generateOutputFilename(infiles), output_dir = output_dir, speckle_filter = speckle_filter, short_chain = short_chain, multilook = multilook, verbose = verbose)
+    output_file = correctionGraph(mtl_file, _generateOutputFilename(infiles, output_name = output_name), output_dir = output_dir, speckle_filter = speckle_filter, short_chain = short_chain, multilook = multilook, verbose = verbose)
     
     
     # Tidy up by deleting temporary intermediate files.
@@ -600,7 +601,7 @@ def removeInput(infiles):
         os.system('rm %s'%infile)
 
 
-def main(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), multilook = 2, speckle_filter = False, short_chain = False, remove = False, verbose = False):
+def main(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), multilook = 2, output_name = 'processed', speckle_filter = False, short_chain = False, remove = False, verbose = False):
     """main(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), multilook = 2, speckle_filter = False, short_chain = False, remove = False, verbose = False)
     
     Preprocess Sentinel-1 GRD IW data from the Copernicus Open Access Data Hub. This functon takes a list of Sentinel-1 input files, and uses the SNAP graph processing tool to generate radiometric/terrain corrected images.
@@ -610,6 +611,7 @@ def main(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), multilook = 
         output_dir: Directory for output .dim/.data files. Defaults to current working directory.
         temp_dir: Directory to output temporary files. Defaults to current working directory.
         multilook: Multilook integer. Defaults to 2.
+        output_name: Name to put in output files for identification. Defaults to 'processed'.
         speckle_filter: Set True to include a Refined Lee speckle filter.
         short_chain: Set True to run a shorter processing chain that omits some optional preprocessing steps at the expense of output quality.
         remove: Set True to remove input files after processing is complete.
@@ -656,8 +658,10 @@ if __name__ == '__main__':
     # Required arguments
     
     # Optional arguments
+    
     optional.add_argument('infiles', metavar = 'S1_FILES', type = str, default = [os.getcwd()], nargs='*', help='Input files. Specify a valid S1 input file (.zip), multiple files through wildcards, or a directory. Defaults to processing all S1 files in current working directory.')
     optional.add_argument('-o', '--output_dir', metavar = 'PATH', type = str, default = os.getcwd(), help = "Output directory for processed files. Defaults to current working directory.")
+    optional.add_argument('-on', '--output_name', metavar = 'STR', type = str, default = 'processed', help = "String to be included in output filenames for identification. Defaults to 'processed'.")
     optional.add_argument('-t', '--temp_dir', metavar = 'PATH', type = str, default = os.getcwd(), help = "Output directory for intermediate files. Defaults to current working directory.")
     optional.add_argument('-m', '--max_scenes', metavar = 'N', type = int, default = 3, help = "Maximum number of scenes from an overpass to reconstitute and process together. Higher values result in fewer output files with fewer artefacts at scene boundaries, but require more RAM. Defaults to 3 scenes.")
     optional.add_argument('-l', '--multilook', metavar = 'N', type = int, default = 2, help = "Multilooking reduces image noise by degrading output resolution from ~10 x 10 m by a factor. Defaults to 2 (~20 x 20 m output).")
@@ -670,7 +674,7 @@ if __name__ == '__main__':
 
     # Parse command line arguments    
     args = parser.parse_args()   
-    
+    pdb.set_trace()
     # Extract all eligible input files (.zip, or directory containing .zip)
     infiles = _prepInfiles(args.infiles)
     
@@ -688,11 +692,11 @@ if __name__ == '__main__':
         for input_files in infiles_split:
         
             # Execute module
-            main(input_files, output_dir = args.output_dir, temp_dir = args.temp_dir, multilook = args.multilook, speckle_filter = args.speckle_filter, short_chain = args.short, remove = args.remove, verbose = args.verbose)
+            main(input_files, output_dir = args.output_dir, temp_dir = args.temp_dir, multilook = args.multilook, output_name = args.output_name, speckle_filter = args.speckle_filter, short_chain = args.short, remove = args.remove, verbose = args.verbose)
     
     else:
         
-        main_partial = functools.partial(main, output_dir = args.output_dir, temp_dir = args.temp_dir, multilook = args.multilook, speckle_filter = args.speckle_filter, short_chain = args.short, remove = args.remove, verbose = args.verbose)
+        main_partial = functools.partial(main, output_dir = args.output_dir, temp_dir = args.temp_dir, multilook = args.multilook, output_name = args.output_name, speckle_filter = args.speckle_filter, short_chain = args.short, remove = args.remove, verbose = args.verbose)
                     
         _run_workers(args.processes, infiles_split)
 
