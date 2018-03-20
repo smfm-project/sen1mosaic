@@ -267,7 +267,7 @@ def splitFiles(infiles, max_scenes, overlap = False):
 
 ## Primary functions
 
-def calibrateGraph(infile, temp_dir = os.getcwd(), short_chain = False, verbose = False):
+def calibrateGraph(infile, temp_dir = os.getcwd(), short_chain = False, output_name = 'processed', verbose = False):
     """calibrateGraph(infile, temp_dir = os.getcwd(), short_chain = False, verbose = False)
     Calibrate Sentinel-1 input data.
     
@@ -285,7 +285,7 @@ def calibrateGraph(infile, temp_dir = os.getcwd(), short_chain = False, verbose 
     temp_dir = '%s/'%temp_dir.rstrip('/')
     
     # Determine a temporary output filename (which must be preceded by original filename. See: http://forum.step.esa.int/t/sliceassembly-op-after-eapphasecorrection-op/1959/5). NB: This also canot end in .dim, because of reasons.
-    outfile = temp_dir + infile.split('/')[-1][:-4] + '_cal'
+    outfile = temp_dir + infile.split('/')[-1][:-4] + '_%s'%output_name + '_cal'
     
     if short_chain:
         xmlfile = os.path.join(os.path.dirname(__file__), '../cfg/1_calibrate_short.xml')
@@ -523,7 +523,7 @@ def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), mult
     for infile in infiles:
                    
         # Execute Graph Processing Tool
-        cal_file = calibrateGraph(infile, temp_dir = temp_dir, short_chain = short_chain, verbose = verbose)
+        cal_file = calibrateGraph(infile, temp_dir = temp_dir, short_chain = short_chain, output_name = output_name, verbose = verbose)
         
         # Keep a record of which files have already been processed for each pass
         preprocess_files.append(cal_file)
@@ -624,7 +624,7 @@ def main(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), multilook = 
     # TODO: Insert assert statements to cleanse inputs. In particular, ensure infiles are appropriate.
     
     # Process input files
-    output_file = processFiles(infiles, output_dir = output_dir, temp_dir = temp_dir, multilook = multilook, speckle_filter = speckle_filter, short_chain = short_chain, verbose = verbose)
+    output_file = processFiles(infiles, output_dir = output_dir, temp_dir = temp_dir, multilook = multilook, output_name = output_name, speckle_filter = speckle_filter, short_chain = short_chain, verbose = verbose)
     
     # Test that output file has been generated correctly.
     if testCompletion(output_file, output_dir = output_dir) == False:
