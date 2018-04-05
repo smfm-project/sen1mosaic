@@ -534,7 +534,6 @@ def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), mult
     # Step 3: Perform geometric correction. Execute Graph Processing Tool
     output_file = correctionGraph(mtl_file, _generateOutputFilename(infiles, output_name = output_name), output_dir = output_dir, speckle_filter = speckle_filter, short_chain = short_chain, multilook = multilook, verbose = verbose)
     
-    
     # Tidy up by deleting temporary intermediate files.
     for this_file in preprocess_files:
         if verbose: print 'Removing %s'%this_file
