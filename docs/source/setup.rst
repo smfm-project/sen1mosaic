@@ -59,6 +59,12 @@ To install SNAP, open a terminal window, change directory to the location you'd 
     
 ...and follow the instructions. The default installation instructions should work fine with sen1mosaic.
 
+Once installed, it's a good idea to increase the memory allocation to SNAP. This is controlled by the text file ``~/snap/bin/gpt.vmoptions``. This can be done with following line:
+
+.. code-block:: console
+       
+    echo '-Xmx8G' >> ~/snap/bin/gpt.vmoptions
+
 For further details and up-to-date installation instructions, see the `SNAP website <http://step.esa.int/main/toolboxes/snap/>`_.
 
 
