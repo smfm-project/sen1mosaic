@@ -582,27 +582,10 @@ def testCompletion(output_file, output_dir = os.getcwd()):
         
     return failed
     
-    
-def removeInput(infiles):
-    """
-    Function to remove input Sentinel-1 .zip files once processing has completed.
-    
-    Args:
-        infiles: A list of Sentinel-1 .zip files to be deleted.
-    """
-    
-    for infile in infiles:
-        
-        # Make sure that input file is a Sentinel-1 file.
-        assert infile[:-4] == '.zip', "Function removeInput() can only delete Sentinel-1 .zip files"
-        assert infile.split('/')[-1][:12] == 'S1A_IW_GRDH' or infile.split('/')[-1][:12] == 'S1B_IW_GRDH', "Function removeInput() can only delete Sentinel-1 .zip files"
-        
-        # Delete input file
-        os.system('rm %s'%infile)
 
 
-def main(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), multilook = 2, output_name = 'processed', speckle_filter = False, short_chain = False, remove = False, verbose = False):
-    """main(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), multilook = 2, speckle_filter = False, short_chain = False, remove = False, verbose = False)
+def main(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), multilook = 2, output_name = 'processed', speckle_filter = False, short_chain = False, verbose = False):
+    """main(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), multilook = 2, speckle_filter = False, short_chain = False, verbose = False)
     
     Preprocess Sentinel-1 GRD IW data from the Copernicus Open Access Data Hub. This functon takes a list of Sentinel-1 input files, and uses the SNAP graph processing tool to generate radiometric/terrain corrected images.
     
@@ -614,7 +597,6 @@ def main(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), multilook = 
         output_name: Name to put in output files for identification. Defaults to 'processed'.
         speckle_filter: Set True to include a Refined Lee speckle filter.
         short_chain: Set True to run a shorter processing chain that omits some optional preprocessing steps at the expense of output quality.
-        remove: Set True to remove input files after processing is complete.
         verbose: Set True to print progress.
     
     Returns:
@@ -634,9 +616,6 @@ def main(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), multilook = 
     else:
         for i in infiles:
             print 'File %s processed successfully'%i
-        # Remove input file where requested.
-        if remove:
-            removeInput(infiles)
     
     return testCompletion(output_file, output_dir = output_dir)
 
@@ -667,7 +646,6 @@ if __name__ == '__main__':
     optional.add_argument('-m', '--multilook', metavar = 'N', type = int, default = 2, help = "Multilooking reduces image noise by degrading output resolution from ~10 x 10 m by a factor. Defaults to 2 (~20 x 20 m output).")
     optional.add_argument('-f', '--speckle_filter', action = 'store_true', help = "Apply a speckle filter (Refined Lee) to output images.")
     optional.add_argument('-s', '--short', action = 'store_true', help = "Perform a more rapid processing chain, ommitting some nonessential preprocessing steps.")
-    optional.add_argument('-r', '--remove', action = 'store_true', help = "Delete input files after processing is complete.")
     optional.add_argument('-v', '--verbose', action = 'store_true', help = "Print script progress.")
     optional.add_argument('-p', '--processes', type = int, metavar = 'N', default = 1, help = "Specify a maximum number of tiles to process in paralell. Note: more processes will require more resources. Defaults to 1.")
 
@@ -694,11 +672,11 @@ if __name__ == '__main__':
         for input_files in infiles_split:
         
             # Execute module
-            main(input_files, output_dir = args.output_dir, temp_dir = args.temp_dir, multilook = args.multilook, output_name = args.output_name, speckle_filter = args.speckle_filter, short_chain = args.short, remove = args.remove, verbose = args.verbose)
+            main(input_files, output_dir = args.output_dir, temp_dir = args.temp_dir, multilook = args.multilook, output_name = args.output_name, speckle_filter = args.speckle_filter, short_chain = args.short, verbose = args.verbose)
     
     else:
         
-        main_partial = functools.partial(main, output_dir = args.output_dir, temp_dir = args.temp_dir, multilook = args.multilook, output_name = args.output_name, speckle_filter = args.speckle_filter, short_chain = args.short, remove = args.remove, verbose = args.verbose)
+        main_partial = functools.partial(main, output_dir = args.output_dir, temp_dir = args.temp_dir, multilook = args.multilook, output_name = args.output_name, speckle_filter = args.speckle_filter, short_chain = args.short, verbose = args.verbose)
                     
         _run_workers(args.processes, infiles_split)
 
