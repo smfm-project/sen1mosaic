@@ -222,7 +222,7 @@ def _updateDataArray(data_out, data_resampled, action = 'sum'):
     if action == 'sum':
         data_out += data_resampled
     elif action == 'max':
-        data_out[data_resampled < data_out] = data_resampled[data_resampled < data_out]
+        data_out[data_resampled > data_out] = data_resampled[data_resampled > data_out]
     elif action == 'min':
         data_out[np.logical_or(data_resampled < data_out, data_out == 0)] = data_resampled[np.logical_or(data_resampled < data_out, data_out == 0)]
 
@@ -428,7 +428,7 @@ def generateDataArray(source_files, pol, md_dest, output_dir = os.getcwd(), outp
                 data_var = _updateDataArray(data_var, data_date ** 2, action = 'sum')
                 data_min = _updateDataArray(data_min, data_date, action = 'min')
                 data_max = _updateDataArray(data_max, data_date, action = 'max')
-
+                
         # Update date for next loop
         last_date = date
         
