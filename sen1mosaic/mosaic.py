@@ -499,7 +499,7 @@ def buildVVVH(VV_file, VH_file, output_dir = os.getcwd(), output_name = 'S1_outp
     Returns:
         Path to VV/VH GeoTiff
     """
-
+    
     from osgeo import gdal
     
     # Load datasets
