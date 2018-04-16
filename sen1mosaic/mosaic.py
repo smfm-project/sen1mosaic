@@ -218,13 +218,16 @@ def _updateDataArray(data_out, data_resampled, action = 'sum'):
     
     assert action in ['sum', 'min', 'max'], "Variable 'action' must be set to 'sum', 'min' or 'max'. It was set to %s."%str(action)
     
-    # Add good data to data_out array   
+    # Add usable data to data_out array   
     if action == 'sum':
-        data_out += data_resampled
+        mask = data_resampled != 0
+        data_out[mask] += data_resampled[mask]
     elif action == 'max':
-        data_out[data_resampled > data_out] = data_resampled[data_resampled > data_out]
+        mask = np.logical_and(np.logical_or(data_resampled > data_out, data_out == 0), data_resampled != 0)
+        data_out[mask] = data_resampled[mask]
     elif action == 'min':
-        data_out[np.logical_or(data_resampled < data_out, data_out == 0)] = data_resampled[np.logical_or(data_resampled < data_out, data_out == 0)]
+        mask = np.logical_or(data_resampled < data_out, data_out == 0)
+        data_out[mask] = data_resampled[mask]
 
     return data_out
 
@@ -464,11 +467,10 @@ def generateDataArray(source_files, pol, md_dest, output_dir = os.getcwd(), outp
     data_mean = data_sum / data_num.astype(np.float32)
     
     # Calculate std of input data (See: https://stackoverflow.com/questions/5543651/computing-standard-deviation-in-a-stream). Where standard deviation undefined (< 2 samples), set to 0.
-
     data_std = np.zeros_like(data_mean)
-    data_std[data_num > 1] = ((data_num * data_var - data_sum * data_sum)[data_num > 1]) / ((data_sum * (data_num - 1))[data_num > 1])
-    data_std[data_std < 0] = 0.
+    data_std[data_num > 1] = ((data_num * data_var - np.abs(data_sum) * data_sum)[data_num > 1]) / ((np.abs(data_sum) * (data_num - 1))[data_num > 1])
     data_std = np.sqrt(data_std)
+    data_std[data_num < 2] = 0.
     
     if verbose: print 'Outputting polarisation %s'%pol
     
