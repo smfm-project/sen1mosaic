@@ -422,7 +422,6 @@ def generateDataArray(source_files, pol, md_dest, output_dir = os.getcwd(), outp
         # Update output arrays if we're finished with the previous date. Skip on first iteration as there's no data yet.
         if n != 0:
             if date != last_date:
-                
                 data_num = _updateDataArray(data_num, (data_date != 0) * 1, action = 'sum')
                 data_sum = _updateDataArray(data_sum, data_date, action = 'sum')
                 data_var = _updateDataArray(data_var, data_date ** 2, action = 'sum')
@@ -445,7 +444,7 @@ def generateDataArray(source_files, pol, md_dest, output_dir = os.getcwd(), outp
         data_resampled = _reprojectImage(ds_source, ds_dest, md_source, md_dest)
         
         # Update array for this date (allowing only 1 measurement per date to be included in sum)
-        data_date = _updateDataArray(data_date, data_resampled, action = 'max')
+        data_date = _updateDataArray(data_date, data_resampled, action = 'min')
         
         # Tidy up
         ds_source = None
