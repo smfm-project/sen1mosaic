@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import argparse
+import datetime
 import glob
 import math
 import numpy as np
@@ -8,44 +9,9 @@ import os
 from scipy import ndimage
 import subprocess
 
+import utilities
 
 import pdb
-
-
-
-### Functions for command line interface.
-
-def _prepInfiles(infiles):
-    """
-    Function to identify valid input files for processing chain
-    
-    Args:
-        infiles: A list of input files, directories, or tiles for Sentinel-1 inputs.
-    Returns:
-        A list of all Sentinel-1 .dim files in infiles.
-    """
-    
-    # Get absolute path, stripped of symbolic links
-    infiles = [os.path.abspath(os.path.realpath(infile)) for infile in infiles]
-    
-    # List to collate 
-    infiles_reduced = []
-    
-    for infile in infiles:
-         
-        # Where infile is a directory:
-        infiles_reduced.extend(glob.glob('%s/*.dim'%infile))
-        
-        # Where infile is a .dim file
-        if infile.split('/')[-1].split('.')[-1] == 'dim': infiles_reduced.extend([infile])
-    
-    # Strip repeats (in case)
-    infiles_reduced = list(set(infiles_reduced))
-    
-    # Reduce input files to only Sentinel-1 processed files from preprocess.py
-    infiles_reduced = [infile for infile in infiles_reduced if ('S1_' in infile.split('/')[-1])]
-    
-    return infiles_reduced
 
 
 ## Primary functions
@@ -55,61 +21,15 @@ def _createOutputArray(md, dtype = np.uint16):
     Create an output array from metadata dictionary.
     
     Args:
-        md: A metadata dictionary created by buildMetadataDictionary().
+        md: A metadata object from utiltities.Metadata()
     
     Returns:
         A numpy array sized to match the specification of the metadata dictionary.
     '''
     
-    output_array = np.zeros((md['nrows'], md['ncols']), dtype = dtype)
+    output_array = np.zeros((md.nrows, md.ncols), dtype = dtype)
     
     return output_array
-
-
-def _sortSourceFiles(source_files):
-    '''
-    When building a large mosaic, it's beest for input tiles to be in a consistent order to avoid strange overlap artefacts. This function sorts a list of files in alphabetical order by their filename.
-    
-    Args:
-        source_files: A list of processed Sentinel-1 files
-    
-    Returns:
-        A list of source_files sorted by date.
-    '''
-    
-    source_files.sort()
-    
-    return source_files
-
-
-def _loadSourceFile(S1_file, pol):
-    '''
-    Loads a Sentinel-1 pre-processed file of a given polarisation into a numpy array.
-    
-    Args:
-        S1_file: /path/to/a/ pre-processed S1 .dim file
-        pol: Polarisation (either 'VV' or 'VH'
-    
-    Returns:
-        A numpy array.
-    '''
-    
-    from osgeo import gdal
-    
-    assert pol in ['VV', 'VH'], "Polarisation must be either 'VV' or 'VH'."
-    assert S1_file[-4:] == '.dim', "Input file must be a .dim file."
-    
-    # Remove trailing slash from input filename, if it exists
-    S1_file = S1_file.rstrip('/')
-    
-    # Identify source file following the standardised file pattern
-    image_path = glob.glob(S1_file[:-4] + '.data/*_%s*.img'%pol)[0]
-       
-    # Load the image 
-    data = gdal.Open(image_path).ReadAsArray()
-    
-    return data
-
 
 
 def _createGdalDataset(md, data_out = None, filename = '', driver = 'MEM', dtype = 3, options = []):
@@ -117,7 +37,7 @@ def _createGdalDataset(md, data_out = None, filename = '', driver = 'MEM', dtype
     Function to create an empty gdal dataset with georefence info from metadata dictionary.
 
     Args:
-        md: A metadata dictionary created by buildMetadataDictionary().
+        md: A metadata object
         data_out: Optionally specify an array of data to include in the gdal dataset.
         filename: Optionally specify an output filename, if image will be written to disk.
         driver: GDAL driver type (e.g. 'MEM', 'GTiff'). By default this function creates an array in memory, but set driver = 'GTiff' to make a GeoTiff. If writing a file to disk, the argument filename must be specified.
@@ -131,9 +51,9 @@ def _createGdalDataset(md, data_out = None, filename = '', driver = 'MEM', dtype
     from osgeo import gdal
     
     gdal_driver = gdal.GetDriverByName(driver)
-    ds = gdal_driver.Create(filename, md['ncols'], md['nrows'], 1, dtype, options = options)
-    ds.SetGeoTransform(md['geo_t'])
-    ds.SetProjection(md['proj'].ExportToWkt())
+    ds = gdal_driver.Create(filename, md.ncols, md.nrows, 1, dtype, options = options)
+    ds.SetGeoTransform(md.geo_t)
+    ds.SetProjection(md.proj.ExportToWkt())
     
     # If a data array specified, add it to the gdal dataset
     if type(data_out).__module__ == np.__name__:
@@ -162,8 +82,8 @@ def _reprojectImage(ds_source, ds_dest, md_source, md_dest):
     
     from osgeo import gdal
     
-    proj_source = md_source['proj'].ExportToWkt()
-    proj_dest = md_dest['proj'].ExportToWkt()
+    proj_source = md_source.proj.ExportToWkt()
+    proj_dest = md_dest.proj.ExportToWkt()
     
     # Reproject source into dest project coordinates
     gdal.ReprojectImage(ds_source, ds_dest, proj_source, proj_dest, gdal.GRA_NearestNeighbour)
@@ -171,35 +91,6 @@ def _reprojectImage(ds_source, ds_dest, md_source, md_dest):
     ds_resampled = ds_dest.GetRasterBand(1).ReadAsArray()
     
     return ds_resampled
-
-
-def _testOutsideTile(md_source, md_dest):
-    '''
-    Function that uses metadata dictionaries from buildMetadatadisctionary() metadata to test whether any part of a source data falls inside destination tile.
-    
-    Args:
-        md_source: A metadata dictionary created by buildMetadataDictionary() representing the source image.
-        md_dest: A metadata dictionary created by buildMetadataDictionary() representing the destination image.
-        
-    Returns:
-        A boolean (True/False) value.
-    '''
-    
-    from osgeo import osr
-            
-    # Set up function to translate coordinates from source to destination
-    tx = osr.CoordinateTransformation(md_source['proj'], md_dest['proj'])
-    
-    # And translate the source coordinates
-    md_source['ulx'], md_source['uly'], z = tx.TransformPoint(md_source['ulx'], md_source['uly'])
-    md_source['lrx'], md_source['lry'], z = tx.TransformPoint(md_source['lrx'], md_source['lry'])   
-    
-    out_of_tile =  md_source['ulx'] >= md_dest['lrx'] or \
-                   md_source['lrx'] <= md_dest['ulx'] or \
-                   md_source['uly'] <= md_dest['lry'] or \
-                   md_source['lry'] >= md_dest['uly']
-    
-    return out_of_tile
 
 
 def _updateDataArray(data_out, data_resampled, action = 'sum'):
@@ -232,159 +123,39 @@ def _updateDataArray(data_out, data_resampled, action = 'sum'):
     return data_out
 
 
-def getSourceMetadata(S1_file, pol = 'VV'):
+def loadPolarisation(scene, pol, md_dest):
     '''
-    Function to extract georefence info from 
+    Funciton to load and reproject a Sentinel-2 band array.
     
     Args:
-        S1_file: A Sentinel-1 .dim file
-        pol: Polarisation of an input file to extract metadata from. Defaults to 'VV'.
-    Returns:
-        A list describing the extent of the file, in the format [xmin, ymin, xmax, ymax].
-        EPSG code of the coordinate reference system of the file.
-    '''
-    
-    from osgeo import gdal, osr
-    
-    # Remove trailing / from safe files if present 
-    S1_file = S1_file.rstrip('/')
-    
-    assert S1_file[-4:] == '.dim', "S1_file must be a .dim file."
-    
-    # Find the xml file that contains file metadata
-    input_file = glob.glob(S1_file[:-4] + '.data/*_%s*.img'%pol)[0]
-        
-    ds = gdal.Open(input_file,0)
-    geo_t = ds.GetGeoTransform()
-    
-    # Get array size
-    nrows = ds.RasterYSize
-    ncols = ds.RasterXSize
-    
-    # Get extent data
-    ulx = geo_t[0]
-    uly = geo_t[3]
-    xres = geo_t[1]
-    yres = geo_t[5]
-    lrx = ulx + (xres * ncols)
-    lry = uly + (yres * nrows)
-    extent = [ulx, lry, lrx, uly]
-    
-    res = abs(xres)
-    
-    # Find EPSG code to define projection
-    srs = osr.SpatialReference(wkt=ds.GetProjection())
-    srs.AutoIdentifyEPSG()
-    EPSG = int(srs.GetAttrValue("AUTHORITY", 1))
-    
-    # Extract date string from filename
-    date = S1_file.split('/')[-1].split('_')[-5]
-    
-    return extent, res, EPSG, date
-
-
-def buildMetadataDictionary(extent_dest, res, EPSG):
-    '''
-    Build a metadata dictionary to describe the destination georeference info.
-    
-    Args:
-        extent_dest: List desciribing corner coordinate points in destination CRS [xmin, ymin, xmax, ymax]
-        res: Integer describing pixel size in m
-        EPSG: EPSG code of destination coordinate reference system. Must be a UTM projection. See: https://www.epsg-registry.org/ for codes.
+        scene: A Sentinel-1 scene of class utilities.LoadScene().
+        pol: The name of a polarisation to load (e.g. 'VV')
+        md_dest: An object of class utilities.Metadata() to reproject image to.
     
     Returns:
-        A dictionary containg projection info.
+        A numpy array of resampled data
     '''
-    
-    from osgeo import osr
-    
-    # Set up an empty dictionary
-    md = {}
-    
-    # Define projection from EPSG code
-    md['EPSG_code'] = EPSG
+     
+    # Write array to a gdal dataset
+    ds_source = _createGdalDataset(scene.metadata, dtype = 6, data_out = scene.getImage(pol))                
 
-    # Get GDAL projection string
-    proj = osr.SpatialReference()
-    proj.ImportFromEPSG(EPSG)
-    md['proj'] = proj
-    
-    # Get image extent data
-    md['ulx'] = float(extent_dest[0])
-    md['lry'] = float(extent_dest[1])
-    md['lrx'] = float(extent_dest[2])
-    md['uly'] = float(extent_dest[3])
-    md['xres'] = float(res)
-    md['yres'] = float(-res)
-
-    # Save current resolution for future reference
-    md['res'] = res
-    
-    # Calculate array size
-    md['nrows'] = int(round((md['lry'] - md['uly']) / md['yres']))
-    md['ncols'] = int(round((md['lrx'] - md['ulx']) / md['xres']))
-    
-    # Define gdal geotransform (Affine)
-    md['geo_t'] = (md['ulx'], md['xres'], 0, md['uly'], 0, md['yres'])
-    
-    return md
-
-
-def getFilesInTile(source_files, pol, md_dest, verbose = False):
-    """
-    Takes a list of source files as input, and determines where each falls within extent of output tile and contains data for input polarisation.
-    
-    Args:
-        source_files: A list of input files.
-        pol: Polarisation. Set to either 'VV' or 'VH'.
-        md_dest: Dictionary from buildMetaDataDictionary() containing output projection details.
-        verbose: Set True to print progress.
-
-    Returns:
-        A reduced list of source_files containing only files that will contribute to each tile.
-    """
-    
-    # Sort source files alphabetically by tile reference.    
-    source_files = _sortSourceFiles(source_files)
-          
-    # Determine which L3A images are within specified tile bounds
-    if verbose: print 'Searching for source files within specified tile...'
-    
-    do_tile = []
-    
-    for S1_file in source_files:
-                                           
-        # Get source file metadata
-        extent_source, res, EPSG_source, date = getSourceMetadata(S1_file)
+    # Create an empty gdal dataset for destination
+    ds_dest = _createGdalDataset(md_dest, dtype = 6)
+            
+    # Reproject source to destination projection and extent
+    data_resampled = _reprojectImage(ds_source, ds_dest, scene.metadata, md_dest)
         
-        # Define source file metadata dictionary
-        md_source = buildMetadataDictionary(extent_source, res, EPSG_source)
-                
-        # Skip processing the file if image falls outside of tile area
-        if _testOutsideTile(md_source, md_dest):
-            do_tile.append(False)
-            continue
-        
-        if len(glob.glob(S1_file.rstrip('/')[:-4] + '.data/*_%s*.img'%pol)) == 0:
-            do_tile.append(False)
-            continue
-        
-        if verbose: print '    Found one: %s'%S1_file
-        do_tile.append(True)
-    
-    # Get subset of source_files in specified tile
-    source_files_tile = list(np.array(source_files)[np.array(do_tile)])
-    
-    return source_files_tile
+    return data_resampled
 
 
-def generateDataArray(source_files, pol, md_dest, output_dir = os.getcwd(), output_name = 'S1_output', verbose = False):
+
+def generateDataArray(scenes, pol, md_dest, output_dir = os.getcwd(), output_name = 'S1_output', verbose = False):
     """generateDataArray(source_files, pol, md_dest, output_dir = os.getcwd(), output_name = 'S1_output', verbose = False)
     
     Function which generates an output GeoTiff file from list of pre-processed S1 source files for a specified output polarisation and extent.
 
     Args:
-        source_files: A list of pre-processed S1 input files.
+        scenes: A list of pre-processed S1 input files.
         pol: Polarisation to process ('VV' or 'VH')
         md_dest: Dictionary from buildMetaDataDictionary() containing output projection details.
         output_dir: Directory to write output files. Defaults to current working directory.
@@ -402,29 +173,16 @@ def generateDataArray(source_files, pol, md_dest, output_dir = os.getcwd(), outp
     data_max = _createOutputArray(md_dest, dtype = np.float32) # To track sum of min value of input images
     
     data_date = _createOutputArray(md_dest, dtype = np.float32) # Data from each image
-    
-    # Reduce the pool of source_files to only those that overlap with output tile.
-    source_files_tile = getFilesInTile(source_files, pol, md_dest, verbose = verbose)
-        
-    # It's only worth processing anything if at least one input image is inside tile
-    if len(source_files_tile) == 0:
-        print "No data inside specified tile for polarisation %s. Not processing this tile."%pol
-        return 'NODATA'
-                
+                   
     # For each source file
-    for n, source_file in enumerate(source_files_tile):
+    for n, scene in enumerate(scenes):
         
-        if verbose: print '    Adding pixels from %s'%source_file.split('/')[-1]
-               
-        # Get source file metadata
-        extent_source, res, EPSG_source, date = getSourceMetadata(source_file)
+        if verbose: print '    Adding pixels from %s'%scene.filename.split('/')[-1]
         
-        # Define source file metadata dictionary
-        md_source = buildMetadataDictionary(extent_source, res, EPSG_source)
         
         # Update output arrays if we're finished with the previous date. Skip on first iteration as there's no data yet.
         if n != 0:
-            if date != last_date:
+            if scene.datetime.date() != last_date:
                 data_num = _updateDataArray(data_num, (data_date != 0) * 1, action = 'sum')
                 data_sum = _updateDataArray(data_sum, data_date, action = 'sum')
                 data_var = _updateDataArray(data_var, data_date ** 2, action = 'sum')
@@ -432,19 +190,10 @@ def generateDataArray(source_files, pol, md_dest, output_dir = os.getcwd(), outp
                 data_max = _updateDataArray(data_max, data_date, action = 'max')
                 
         # Update date for next loop
-        last_date = date
+        last_date = scene.datetime.date()
         
-        # Load source data for the band
-        data = _loadSourceFile(source_file, pol)
-        
-        # Write array to a gdal dataset
-        ds_source = _createGdalDataset(md_source, dtype = 6, data_out = data)                
-
-        # Create an empty gdal dataset for destination
-        ds_dest = _createGdalDataset(md_dest, dtype = 6)
-                
-        # Reproject source to destination projection and extent
-        data_resampled = _reprojectImage(ds_source, ds_dest, md_source, md_dest)
+        # Load data        
+        data_resampled = loadPolarisation(scene, pol, md_dest)
         
         # Update array for this date (allowing only 1 measurement per date to be included in sum)
         data_date = _updateDataArray(data_date, data_resampled, action = 'min')
@@ -475,7 +224,7 @@ def generateDataArray(source_files, pol, md_dest, output_dir = os.getcwd(), outp
     if verbose: print 'Outputting polarisation %s'%pol
     
     # Generate default output filename
-    filename = '%s/%s_%s_%s_R%sm.tif'%(output_dir, output_name, '%s', pol, str(md_dest['res']))
+    filename = '%s/%s_%s_%s_R%sm.tif'%(output_dir, output_name, '%s', pol, str(md_dest.res))
     
     # Output files (mean, stdev, max, min)
     ds_out = _createGdalDataset(md_dest, data_out = data_mean, filename = filename%'mean', driver='GTiff', dtype = 6, options = ['COMPRESS=LZW'])
@@ -562,8 +311,8 @@ def buildVRT(red_band, green_band, blue_band, output_path):
 
     
 
-def main(source_files, extent_dest, EPSG_dest, output_res = 20, pol = 'both', output_dir = os.getcwd(), output_name = 'S1_output', verbose = False):
-    """main(source_files, extent_dest, EPSG_dest, output_res = 20, pol = 'both', output_dir = os.getcwd(), output_name = 'S1_output', verbose = False)
+def main(source_files, extent_dest, EPSG_dest, output_res = 20, pol = 'both', start = '20140101', end = datetime.datetime.today().strftime('%Y%m%d'), output_dir = os.getcwd(), output_name = 'S1_output', verbose = False):
+    """main(source_files, extent_dest, EPSG_dest, output_res = 20, pol = 'both', start = '20140101', end = datetime.datetime.today().strftime('%Y%m%d'), output_dir = os.getcwd(), output_name = 'S1_output', verbose = False)
     
     Function to run through the entire chain for converting output of sen2Three into custom mosaics. This is the function that is initiated from the command line.
     
@@ -585,26 +334,40 @@ def main(source_files, extent_dest, EPSG_dest, output_res = 20, pol = 'both', ou
     
     # Remove trailing / from output directory if present 
     output_dir = output_dir.rstrip('/')
-    
+        
     # Convert band and res list to numpy arrays for indexing
     if pol == 'both':
         pol_list = np.array(['VV', 'VH'])
     else:
         pol_list = np.array([pol])
-    
-    # Build a dictionary with output projection metadata
-    md_dest = buildMetadataDictionary(extent_dest, output_res, EPSG_dest)    
+       
+    # Get metadata for output dictionary
+    md_dest = utilities.Metadata(extent_dest, output_res, EPSG_dest)    
         
     # Keep track of output filenames
     filenames = []
     
     # Process images for each polarisation
     for pol in pol_list:
-        
-        if verbose: print 'Doing polarisation %s'%pol
                 
+        if verbose: print 'Doing polarisation %s'%pol
+        
+        # Load metadata for all Sentinel-1 datasets
+        scenes = [utilities.LoadScene(source_file) for source_file in source_files]
+        
+        # Sort input scenes
+        scenes = utilities.sortScenes(scenes)
+        
+        # Reduce the pool of scenes to only those that overlap with output tile
+        scenes_tile = utilities.getSourceFilesInTile(scenes, md_dest, pol = pol, start = start, end = end, verbose = verbose)       
+        
+        # It's only worth processing a tile if at least one input image is inside tile
+        if len(scenes_tile) == 0:
+            print "    No data inside specified tile for polarisation %s. Skipping."%pol
+            continue
+        
         # Combine pixels into output images for each band
-        filename = generateDataArray(source_files, pol, md_dest, output_dir = output_dir, output_name = output_name, verbose = verbose)
+        filename = generateDataArray(scenes_tile, pol, md_dest, output_dir = output_dir, output_name = output_name, verbose = verbose)
         
         # Keep track of output filenames
         filenames.append(filename)
@@ -612,7 +375,8 @@ def main(source_files, extent_dest, EPSG_dest, output_res = 20, pol = 'both', ou
     # Build VRT output files for straightforward visualisation
     if verbose: print 'Building .VRT images for visualisation.'
     
-    if pol_list.tolist() == ['VV','VH'] or pol_list.tolist() == ['VH', 'VV'] and 'NODATA' not in pol_list:
+    # Skip if there are no 'VH' images (or no images at all).
+    if pol_list.tolist() == ['VV','VH'] and len(filenames) > 1:
                 
         # Build a VV/VH image
         filename_VVVH = buildVVVH(filenames[pol_list.tolist().index('VV')]%'mean', filenames[pol_list.tolist().index('VH')]%'mean', output_dir = output_dir, output_name = output_name)
@@ -625,7 +389,6 @@ def main(source_files, extent_dest, EPSG_dest, output_res = 20, pol = 'both', ou
         buildVRT(filenames[pol_list.tolist().index('VV')]%'min', filenames[pol_list.tolist().index('VH')]%'min', filenames[pol_list.tolist().index('VV')]%'stdev','%s/%s_VVmin_VHmin_VVstdev_R%s.vrt'%(output_dir, output_name, str(output_res)))
     
     if verbose: print 'Processing complete!'
-
 
 
 if __name__ == "__main__":
@@ -643,6 +406,8 @@ if __name__ == "__main__":
 
     # Optional arguments
     optional.add_argument('infiles', metavar = 'S1_FILES', type = str, default = [os.getcwd()], nargs = '*', help = 'Input files from preprocess.py. Specify a valid S1 input file (.dim), multiple files through wildcards, or a directory. Defaults to processing all S1 files in current working directory.')
+    optional.add_argument('-st', '--start', type = str, default = '20140101', help = "Start date for tiles to include in format YYYYMMDD. Defaults to processing all dates.")
+    optional.add_argument('-en', '--end', type = str, default = datetime.datetime.today().strftime('%Y%m%d'), help = "End date for tiles to include in format YYYYMMDD. Defaults to processing all dates.")
     optional.add_argument('-r', '--resolution', type = int, metavar = 'RES', default = 20, help=  "Output resolution in metres. Defaults to 20 m.")
     optional.add_argument('-o', '--output_dir', type = str, metavar = 'PATH', default = os.getcwd(), help = "Output directory. If nothing specified, downloads will output to the present working directory, given a standard filename.")
     optional.add_argument('-n', '--output_name', type=str, metavar = 'NAME', default = 'S1_output', help="Optionally specify a string to precede output filename.")
@@ -652,13 +417,13 @@ if __name__ == "__main__":
     # Get arguments
     args = parser.parse_args()
     
-    # Extract all eligible input files (.dim, or directory containing .dim)
-    infiles = _prepInfiles(args.infiles)
-    
     # Convert arguments to absolute paths    
-    infiles = sorted([os.path.abspath(i) for i in infiles])
+    infiles = sorted([os.path.abspath(i) for i in args.infiles])   
     output_dir = os.path.abspath(args.output_dir)
-
-    main(infiles, args.target_extent, args.epsg, output_dir = output_dir, output_name = args.output_name, output_res = args.resolution, pol = args.pol, verbose = args.verbose)
+    
+    # Extract all eligible input files (.dim, or directory containing .dim)
+    infiles = utilities.prepInfiles(infiles)
+    
+    main(infiles, args.target_extent, args.epsg, start = args.start, end = args.end, output_res = args.resolution, pol = args.pol, output_dir = output_dir, output_name = args.output_name, verbose = args.verbose)
     
     

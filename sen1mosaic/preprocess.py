@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import argparse
+import datetime
 import functools
 import glob
 import multiprocessing
@@ -679,5 +680,4 @@ if __name__ == '__main__':
                     
         _run_workers(args.processes, infiles_split)
 
-        
-
+   
