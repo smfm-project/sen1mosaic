@@ -20,30 +20,30 @@ To install Anaconda Python, open a terminal window, change directory to the loca
 
 .. code-block:: console
     
-    wget https://repo.continuum.io/archive/Anaconda2-4.2.0-Linux-x86_64.sh
-    bash Anaconda2-4.2.0-Linux-x86_64.sh
-
-
-Once complete, you'll need to add this version of Python to your .bashrc file as follows:
-
-.. code-block:: console
-    
-    # Substitute root for the path to your system's installation and .bashrc file.
-    echo 'export PATH="~/anaconda2/bin:$PATH"' >> ~/.bashrc
-    exec -l $SHELL
-
+    wget https://repo.anaconda.com/archive/Anaconda2-5.1.0-Linux-x86_64.sh
+    chmod +x Anaconda2-5.1.0-Linux-x86_64.sh 
+    ./Anaconda2-5.1.0-Linux-x86_64.sh 
 
 If this has functioned, on executing ``python`` in a terminal window, you should ssee the following:
 
 .. code-block:: console
-
-    Python 2.7.12 |Anaconda custom (64-bit)| (default, Jul  2 2016, 17:42:40) 
-    [GCC 4.4.7 20120313 (Red Hat 4.4.7-1)] on linux2
+    
+    Python 2.7.14 |Anaconda, Inc.| (default, Dec  7 2017, 17:05:42) 
+    [GCC 7.2.0] on linux2
     Type "help", "copyright", "credits" or "license" for more information.
-    Anaconda is brought to you by Continuum Analytics.
-    Please check out: http://continuum.io/thanks and https://anaconda.org
     >>> 
 
+sen1mosaic requires the gdal module to be installed. At the time of writing, it can be installed using the commands:
+
+.. code-block:: console
+    
+    conda install -c anaconda gdal
+
+If successful, on opening a new terminal and running ``python`` you should be able to import the gdal without error:
+
+.. code-block:: python
+
+    >>> from osgeo import gdal
 
 Installing SNAP
 ---------------
