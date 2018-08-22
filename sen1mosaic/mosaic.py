@@ -10,6 +10,7 @@ from scipy import ndimage
 import subprocess
 
 import utilities
+import sen2mosaic.utilities
 
 import pdb
 
@@ -137,7 +138,7 @@ def loadPolarisation(scene, pol, md_dest):
     '''
      
     # Write array to a gdal dataset
-    ds_source = _createGdalDataset(scene.metadata, dtype = 6, data_out = scene.getImage(pol))                
+    ds_source = _createGdalDataset(scene.metadata, dtype = 6, data_out = scene.getBand(pol))                
 
     # Create an empty gdal dataset for destination
     ds_dest = _createGdalDataset(md_dest, dtype = 6)
@@ -343,7 +344,7 @@ def main(source_files, extent_dest, EPSG_dest, output_res = 20, pol = 'both', st
         pol_list = np.array([pol])
        
     # Get metadata for output dictionary
-    md_dest = utilities.Metadata(extent_dest, output_res, EPSG_dest)    
+    md_dest = sen2mosaic.utilities.Metadata(extent_dest, output_res, EPSG_dest)    
         
     # Keep track of output filenames
     filenames = []
@@ -372,13 +373,13 @@ def main(source_files, extent_dest, EPSG_dest, output_res = 20, pol = 'both', st
         
         # Keep track of output filenames
         filenames.append(filename)
-        
-    # Build VRT output files for straightforward visualisation
-    if verbose: print 'Building .VRT images for visualisation.'
     
     # Skip if there are no 'VH' images (or no images at all).
     if pol_list.tolist() == ['VV','VH'] and len(filenames) > 1:
-                
+        
+        # Build VRT output files for straightforward visualisation
+        if verbose: print 'Building .VRT images for visualisation.'
+        
         # Build a VV/VH image
         filename_VVVH = buildVVVH(filenames[pol_list.tolist().index('VV')]%'mean', filenames[pol_list.tolist().index('VH')]%'mean', output_dir = output_dir, output_name = output_name)
         
