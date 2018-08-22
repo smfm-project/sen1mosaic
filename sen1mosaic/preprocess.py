@@ -519,7 +519,8 @@ def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), mult
     '''
     
     # Test that output directory is writeable
-    output_dir = os.path.abspath(output_dir)
+    output_dir = os.path.abspath(os.path.expanduser(output_dir))
+    assert os.path.exists(output_dir), "Output directory (%s) does not exist."%output_dir
     assert os.access(output_dir, os.W_OK), "Output directory (%s) does not have write permission. Try setting a different output directory"%output_dir
     
     # Step 1: Run calibration SNAP processing chain
