@@ -332,9 +332,10 @@ def main(source_files, extent_dest, EPSG_dest, output_res = 20, pol = 'both', st
     assert len(source_files) >= 1, "No source files in specified location."
     assert pol in ['VV', 'VH', 'both'], "Polarisation must be set to 'VV', 'VH' or 'both'. You input %s."%str(pol)
     
-    # Remove trailing / from output directory if present 
-    output_dir = output_dir.rstrip('/')
-        
+    # Test that output directory is writeable
+    output_dir = os.path.abspath(output_dir)
+    assert os.access(output_dir, os.W_OK), "Output directory (%s) does not have write permission. Try setting a different output directory"%output_dir
+            
     # Convert band and res list to numpy arrays for indexing
     if pol == 'both':
         pol_list = np.array(['VV', 'VH'])

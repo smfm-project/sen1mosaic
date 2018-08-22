@@ -5,8 +5,11 @@ import lxml.etree as ET
 import numpy as np
 import os
 
+import sen2mosaic.utilities
+
 import pdb
 
+"""
 class Metadata(object):
     '''
     This is a generic metadata class for Geosptial data
@@ -80,7 +83,7 @@ class Metadata(object):
         geo_t = (self.ulx, self.xres, 0, self.uly, 0, self.yres)
         
         return geo_t
-
+"""
 
 
 
@@ -101,13 +104,18 @@ class LoadScene(object):
         # Get file format
         self.file_format = self.__getFormat()
         
+        # Save satellite name
+        self.satellite = 'S1'
+        
         # Save image type (S1_single, S1_dual, S2)
         self.image_type = self.__getImageType()
-                   
+        
+        self.tile = self.__getTileID()
+        
         self.__getMetadata()
         
         # Define source metadata
-        self.metadata = Metadata(self.extent, self.resolution, self.EPSG)
+        self.metadata = sen2mosaic.utilities.Metadata(self.extent, self.resolution, self.EPSG)
         
         
     def __checkFilename(self, filename):
@@ -146,7 +154,13 @@ class LoadScene(object):
             image_type = 'S1single'
         
         return image_type
+    
+    def __getTileID(self):
+        '''
+        '''
         
+        return '_'.join(self.filename.split('/')[-1].split('_')[-4:])
+    
     def __getMetadata(self):
         '''
         Extract metadata from the Sentinel-1 file.
@@ -169,29 +183,29 @@ class LoadScene(object):
         return image_path[0]
 
     
-    def getMask(self):
+    def getMask(self, md = None):
         '''
         Load the mask to a numpy array.
         '''
         
         from osgeo import gdal
+                
+        # Load mask
+        image_path = self.__getImagePath()
         
-        # Don't rerun processing if mask already present in memory
-        if not hasattr(self, 'mask'):
-            
-            # Load mask
-            image_path = self.__getImagePath()
-            
-            mask = gdal.Open(image_path, 0).ReadAsArray()
-            
-            mask = mask >= 0
-                
-            # Save mask to class for later use
-            self.mask = mask
-                
-        return self.mask
+        mask = gdal.Open(image_path, 0).ReadAsArray()
+        
+        # Keep track of pixels where data are contained
+        data = mask != 0
+        
+        # Reproject?
+        if md is not None:
+            data = sen2mosaic.utilities.reprojectBand(self, data, md, dtype = 1, resampling = gdal.GRA_Mode).astype(np.bool)
+        
+        # Return pixels without data
+        return data == 0
     
-    def getImage(self, pol):
+    def getBand(self, pol, md = None):
         '''
         Load a single polarisation
         
@@ -209,6 +223,10 @@ class LoadScene(object):
         
         # Load the image
         data = gdal.Open(image_path, 0).ReadAsArray()
+
+        # Reproject?
+        if md is not None:
+            data = sen2mosaic.utilities.reprojectBand(self, data, md, dtype = 6, resampling = gdal.GRA_Average) 
         
         return data
 
@@ -276,6 +294,10 @@ def prepInfiles(infiles):
         A list of all Sentinel-1 .dim files in infiles.
     """
     
+    # Make interable if only one item
+    if not isinstance(infiles, list):
+        infiles = [infiles]
+        
     # Get absolute path, stripped of symbolic links
     infiles = [os.path.abspath(os.path.realpath(infile)) for infile in infiles]
     
