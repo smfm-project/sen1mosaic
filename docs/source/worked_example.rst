@@ -67,7 +67,7 @@ To process all Sentinel-1 input files, we can submit the following line:
 
 .. code-block:: console
 
-    s1m preprocess -f
+    s1m preprocess -f -v
 
 This command will loop through each Sentinel-1 input file, stitch together images from the same satellite overpass and process them sequentially. You might alternatively want to specify multiple processes to run similaneously (with the ``-p`` flag), although bear in mind that this will require access to a large quantity of memory.
 
@@ -99,7 +99,7 @@ To perform this step, we can run the following script:
 
 .. code-block:: console
 
-    s1m mosaic -te 710500 7890000 1250000 8340000 -e 32736 -r 50 -n worked_example
+    s1m mosaic -te 710500 7890000 1250000 8340000 -e 32736 -r 50 -v -n worked_example
 
 Here we didn't specify an input directory (the script defaults to processing all compatable files in the current working directory) or the ``-o`` (``--output_dir``) option, meaning that results will be output to the current working directory. Once processing is complte, you can use ``ls`` to view the newly created output files:
 
