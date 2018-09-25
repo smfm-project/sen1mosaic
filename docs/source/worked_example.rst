@@ -132,7 +132,7 @@ and the second shows:
 * Green: minimum VH backscatter
 * Blue: standard deviation of VV backscatter
 
-image:: images/zambezia.png
+.. image:: images/zambezia.png
    :scale: 50 %
    :align:centre
  
