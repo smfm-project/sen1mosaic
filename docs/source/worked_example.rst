@@ -134,7 +134,7 @@ and the second shows:
 
 .. image:: images/zambezia.png
    :scale: 50 %
-   :align:centre
+   :align: centre
  
 See also
 --------
