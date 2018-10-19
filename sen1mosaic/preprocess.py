@@ -663,6 +663,8 @@ if __name__ == '__main__':
     # Extract all eligible input files (.zip, or directory containing .zip)
     infiles = _prepInfiles(args.infiles)
     
+    assert len(infiles) > 0, "No valid input files detected."
+    
     # Convert arguments to absolute paths    
     infiles = np.array(sorted([os.path.abspath(i) for i in infiles])) # Also sort, and convert to an array.
     output_dir = os.path.abspath(args.output_dir)
