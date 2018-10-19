@@ -296,7 +296,7 @@ def calibrateGraph(infile, temp_dir = os.getcwd(), short_chain = False, output_n
     if verbose: print 'Pre-processing %s'%infile
     
     # Prepare command
-    command = [os.path.expanduser('~/snap/bin/gpt'), xmlfile, '-x', '-Pinputfile=%s'%infile, '-Poutputfile=%s'%outfile]
+    command = ['gpt', xmlfile, '-x', '-Pinputfile=%s'%infile, '-Poutputfile=%s'%outfile]
     
     # Execute chain
     output_text = _runCommand(command, verbose = verbose)
@@ -348,7 +348,7 @@ def multilookGraph(infiles, multilook = 2, verbose = False):
         xmlfile = os.path.join(os.path.dirname(__file__), '../cfg/2_multilook.xml')
     
     # Prepare command
-    command = [os.path.expanduser('~/snap/bin/gpt'), xmlfile, '-x', '-Pinputfiles=%s'%infiles_formatted, '-Poutputfile=%s'%outfile, '-Pmultilook=%s'%str(multilook)]
+    command = ['gpt', xmlfile, '-x', '-Pinputfiles=%s'%infiles_formatted, '-Poutputfile=%s'%outfile, '-Pmultilook=%s'%str(multilook)]
     
     # Execute chain
     output_text = _runCommand(command, verbose = verbose)
@@ -394,7 +394,7 @@ def correctionGraph(infile, outfile, output_dir = os.getcwd(), multilook = 2, sp
         xmlfile = os.path.join(os.path.dirname(__file__), '../cfg/3_terrain_correction.xml')
     
     # Prepare command
-    command = [os.path.expanduser('~/snap/bin/gpt'), xmlfile, '-x', '-Pinputfile=%s'%infile, '-Poutputfile=%s'%output_file, '-Pextent=%s'%extent]
+    command = ['gpt', xmlfile, '-x', '-Pinputfile=%s'%infile, '-Poutputfile=%s'%output_file, '-Pextent=%s'%extent]
     
     # Execute chain
     output_text = _runCommand(command, verbose = verbose)
