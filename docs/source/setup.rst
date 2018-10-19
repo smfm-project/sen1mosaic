@@ -59,7 +59,13 @@ To install SNAP, open a terminal window, change directory to the location you'd 
     
 ...and follow the instructions. The default installation instructions should work fine with sen1mosaic.
 
-Once installed, it's a good idea to increase the memory allocation to SNAP. This is controlled by the text file ``~/snap/bin/gpt.vmoptions``. This can be done with following line:
+Sen1mosaic uses the 'graph processing tool' to operate SNAP commands from the command line. To give access system-wide to the graph processing tool, you'll need to add an alias to your ``.bashrc`` file as follows:
+
+.. code-block:: console
+    
+    echo 'alias gpt=~/snap/bin/gpt' >> ~/.bashrc
+
+It's a good idea to increase the memory allocation to SNAP. This is controlled by the text file ``~/snap/bin/gpt.vmoptions``. This can be done with following line:
 
 .. code-block:: console
        
