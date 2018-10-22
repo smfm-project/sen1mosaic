@@ -21,7 +21,7 @@
   <node id="ThermalNoiseRemoval">
     <operator>ThermalNoiseRemoval</operator>
     <sources>
-      <sourceProduct refid="Remove-GRD-Border-Noise"/>
+      <sourceProduct refid="Apply-Orbit-File"/>
     </sources>
     <parameters class="com.bc.ceres.binding.dom.XppDomElement">
       <selectedPolarisations/>
@@ -32,7 +32,7 @@
   <node id="Calibration">
     <operator>Calibration</operator>
     <sources>
-      <sourceProduct refid="Apply-Orbit-File"/>
+      <sourceProduct refid="ThermalNoiseRemoval"/>
     </sources>
     <parameters class="com.bc.ceres.binding.dom.XppDomElement">
       <sourceBands/>
