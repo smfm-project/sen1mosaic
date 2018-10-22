@@ -296,7 +296,7 @@ def calibrateGraph(infile, temp_dir = os.getcwd(), short_chain = False, output_n
     if verbose: print 'Pre-processing %s'%infile
     
     # Prepare command
-    command = ['gpt', xmlfile, '-x', '-Pinputfile=%s'%infile, '-Poutputfile=%s'%outfile]
+    command = ['gpt', xmlfile, '-x', '-Pinputfile=%s/manifest.safe'%infile, '-Poutputfile=%s'%outfile]
     
     # Execute chain
     output_text = _runCommand(command, verbose = verbose)
