@@ -18,17 +18,6 @@
       <continueOnFail>false</continueOnFail>
     </parameters>
   </node>
-  <node id="Remove-GRD-Border-Noise">
-    <operator>Remove-GRD-Border-Noise</operator>
-    <sources>
-      <sourceProduct refid="Apply-Orbit-File"/>
-    </sources>
-    <parameters class="com.bc.ceres.binding.dom.XppDomElement">
-      <selectedPolarisations/>
-      <borderLimit>500</borderLimit>
-      <trimThreshold>0.5</trimThreshold>
-    </parameters>
-  </node>
   <node id="ThermalNoiseRemoval">
     <operator>ThermalNoiseRemoval</operator>
     <sources>
@@ -43,7 +32,7 @@
   <node id="Calibration">
     <operator>Calibration</operator>
     <sources>
-      <sourceProduct refid="ThermalNoiseRemoval"/>
+      <sourceProduct refid="Apply-Orbit-File"/>
     </sources>
     <parameters class="com.bc.ceres.binding.dom.XppDomElement">
       <sourceBands/>
@@ -79,9 +68,6 @@
     </node>
     <node id="ThermalNoiseRemoval">
       <displayPosition x="356.0" y="128.0"/>
-    </node>
-    <node id="Remove-GRD-Border-Noise">
-      <displayPosition x="264.0" y="126.0"/>
     </node>
     <node id="Apply-Orbit-File">
       <displayPosition x="124.0" y="122.0"/>
