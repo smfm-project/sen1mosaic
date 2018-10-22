@@ -164,7 +164,7 @@ def _prepInfiles(infiles):
     for infile in infiles:
          
         # Where infile is a directory:
-        infiles_reduced.extend(glob.glob('%s/S1?_IW_GRDH_*'%infile))
+        infiles_reduced.extend(glob.glob('%s/S1?_IW_GRDH_*_????'%infile))
         
         # Where infile is a .zip file
         if infile.split('/')[-1].split('.')[-1] == 'zip': infiles_reduced.extend([infile])
