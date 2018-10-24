@@ -292,7 +292,6 @@ def calibrateGraph(infile, temp_dir = os.getcwd(), short_chain = False, output_n
     """
     
     
-    pdb.set_trace()
     # Get absolute location of graph processing tool
     gpt = os.path.realpath(os.path.abspath(os.path.expanduser(gpt)))
     assert os.path.exists(gpt), "Graph processing tool not found."
