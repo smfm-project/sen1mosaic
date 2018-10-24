@@ -300,7 +300,11 @@ def calibrateGraph(infile, temp_dir = os.getcwd(), short_chain = False, output_n
     temp_dir = '%s/'%temp_dir.rstrip('/')
     
     # Determine a temporary output filename (which must be preceded by original filename. See: http://forum.step.esa.int/t/sliceassembly-op-after-eapphasecorrection-op/1959/5). NB: This also canot end in .dim, because of reasons.
-    outfile = temp_dir + infile.split('/')[-1].split('.')[0] + '_%s'%output_name + '_cal'
+    filestring = infile.split('/')
+    filestring = filestring[-2] if filestring[-1] == 'manifest.safe' else filestring[-1]
+    filestring = filestring.split('.')[0]
+    
+    outfile = '%s%s_%s_cal'%(temp_dir, filestring, output_name)
     
     if short_chain:
         xmlfile = os.path.join(os.path.dirname(__file__), '../cfg/1_calibrate_short.xml')
