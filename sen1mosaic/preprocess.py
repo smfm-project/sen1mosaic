@@ -311,10 +311,10 @@ def calibrateGraph(infile, temp_dir = os.getcwd(), short_chain = False, output_n
     else:
         xmlfile = os.path.join(os.path.dirname(__file__), '../cfg/1_calibrate.xml')
         
-    if verbose: print 'Pre-processing %s'%infile
-    
     # Prepare command
     command = [gpt, xmlfile, '-x', '-Pinputfile=%s'%infile, '-Poutputfile=%s'%outfile]
+    
+    if verbose: print 'Executing: %s'%' '.join(command)
     
     # Execute chain
     output_text = _runCommand(command, verbose = verbose)
@@ -349,29 +349,20 @@ def multilookGraph(infiles, multilook = 2, gpt = '~/snap/bin/gpt', verbose = Fal
         # Select graph that first reassembles multiple images
         outfile = infiles[-1][:-4] + '_mtl_%st.dim'%str(len(infiles))
         
-        single = False
+        xmlfile = os.path.join(os.path.dirname(__file__), '../cfg/2_multilook.xml')
         
-        if verbose: print 'Multilooking and stitching %s'%infiles_formatted
-
     # And for case where only one file is input
     else:
         infiles_formatted = infiles[0]
         
         outfile = infiles[0][:-4] + '_mtl_1t.dim'
         
-        single = True
-        
-        if verbose: print 'Multilooking %s'%infiles_formatted[0]
-    
-    # Pick processing chain for 1 single image vs a strip of several joined images
-    if single:
-        xmlfile = os.path.join(os.path.dirname(__file__), '../cfg/2_multilook_single.xml')
-        
-    else:
-        xmlfile = os.path.join(os.path.dirname(__file__), '../cfg/2_multilook.xml')
+        xmlfile = os.path.join(os.path.dirname(__file__), '../cfg/2_multilook_single.xml')        
     
     # Prepare command
     command = [gpt, xmlfile, '-x', '-Pinputfiles=%s'%infiles_formatted, '-Poutputfile=%s'%outfile, '-Pmultilook=%s'%str(multilook)]
+    
+    if verbose: print 'Executing: %s'%' '.join(command)
     
     # Execute chain
     output_text = _runCommand(command, verbose = verbose)
@@ -409,9 +400,7 @@ def correctionGraph(infile, outfile, output_dir = os.getcwd(), multilook = 2, sp
     
     # Get extent of input file (for edge correction)
     extent = getExtent(infile, multilook = multilook)
-    
-    if verbose: print 'Geometrically correcting %s'%infile
-    
+        
     if speckle_filter and short_chain:
         xmlfile = os.path.join(os.path.dirname(__file__), '../cfg/3_terrain_correction_filter_short.xml')
     elif speckle_filter and not short_chain:
@@ -423,6 +412,8 @@ def correctionGraph(infile, outfile, output_dir = os.getcwd(), multilook = 2, sp
     
     # Prepare command
     command = [gpt, xmlfile, '-x', '-Pinputfile=%s'%infile, '-Poutputfile=%s'%output_file, '-Pextent=%s'%extent]
+    
+    if verbose: print 'Executing: %s'%' '.join(command)
     
     # Execute chain
     output_text = _runCommand(command, verbose = verbose)
