@@ -276,7 +276,7 @@ def splitFiles(infiles, max_scenes, overlap = False):
 
 ## Primary functions
 
-def calibrateGraph(infile, temp_dir = os.getcwd(), short_chain = False, output_name = 'processed', gpt = '~/snap/bin/gpt', verbose = False):
+def calibrateGraph(infile, temp_dir = os.getcwd(), short_chain = False, noorbit = False, output_name = 'processed', gpt = '~/snap/bin/gpt', verbose = False):
     """calibrateGraph(infile, temp_dir = os.getcwd(), short_chain = False, verbose = False)
     Calibrate Sentinel-1 input data.
     
@@ -284,6 +284,7 @@ def calibrateGraph(infile, temp_dir = os.getcwd(), short_chain = False, output_n
         infile: A Sentinel-1 GRD IW image from the Copernicus Open Access Data Hub, in zip format.
         temp_dir: Directory to output temporary files. Defaults to current working directory.
         short_chain: Set True to run a shorter processing chain that omits some optional preprocessing steps at the expense of output quality.
+        noorbit: Set True to skip the downloading of a precise Sentinel-1 orbit file.
         gpt: Path to graph processing tool. Defaults to '~/snap/bin/gpt'.
         verbose: Print progress from SNAP.
     
@@ -307,10 +308,16 @@ def calibrateGraph(infile, temp_dir = os.getcwd(), short_chain = False, output_n
     outfile = '%s%s_%s_cal'%(temp_dir, filestring, output_name)
     
     if short_chain:
-        xmlfile = os.path.join(os.path.dirname(__file__), '../cfg/1_calibrate_short.xml')
+        if noorbit:
+            xmlfile = os.path.join(os.path.dirname(__file__), '../cfg/1_calibrate_noorbit_short.xml')
+        else:
+            xmlfile = os.path.join(os.path.dirname(__file__), '../cfg/1_calibrate_short.xml')
     else:
-        xmlfile = os.path.join(os.path.dirname(__file__), '../cfg/1_calibrate.xml')
-        
+        if noorbit:
+            xmlfile = os.path.join(os.path.dirname(__file__), '../cfg/1_calibrate_noorbit.xml')
+        else:
+            xmlfile = os.path.join(os.path.dirname(__file__), '../cfg/1_calibrate.xml')        
+
     # Prepare command
     command = [gpt, xmlfile, '-x', '-Pinputfile=%s'%infile, '-Poutputfile=%s'%outfile]
     
@@ -521,7 +528,7 @@ def _generateOutputFilename(infiles, output_name = 'processed'):
     return output_filename
 
 
-def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), multilook = 2, output_name = 'processed', speckle_filter = False, short_chain = False, gpt = '~/snap/bin/gpt', verbose = False):
+def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), multilook = 2, output_name = 'processed', speckle_filter = False, short_chain = False, noorbit = False, gpt = '~/snap/bin/gpt', verbose = False):
     '''processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), multilook = 2, output_name = 'processed', speckle_filter = False, short_chain = False, verbose = False)
     
     A function to pre-process one or more Sentinel-1 IW GRD images in preparation for mosaicking with the SNAP Graph Processing Tool. Images are processed in three steps: 1) Calibration, 2) Reassembly into a single image (if >1 image used from an overpass) and multilookng, and 3) Radiometric/geometric terrain correction.
@@ -534,6 +541,7 @@ def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), mult
         output_name: Name to put in output files for identification. Defaults to 'processed'.
         speckle_filter: Set True to include a Refined Lee speckle filter.
         short_chain: Set True to run a shorter processing chain that omits some optional preprocessing steps at the expense of output quality.
+        noorbit: Set True to skip the downloading of a precise Sentinel-1 orbit file.
         gpt: Path to SNAP graph processing tool. Defaults to '~/snap/bin/gpt'.
         verbose: Set True to print progress.
     
@@ -552,7 +560,7 @@ def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), mult
     for infile in infiles:
                    
         # Execute Graph Processing Tool
-        cal_file = calibrateGraph(infile, temp_dir = temp_dir, short_chain = short_chain, output_name = output_name, gpt = gpt, verbose = verbose)
+        cal_file = calibrateGraph(infile, temp_dir = temp_dir, short_chain = short_chain, noorbit = noorbit, output_name = output_name, gpt = gpt, verbose = verbose)
         
         # Keep a record of which files have already been processed for each pass
         preprocess_files.append(cal_file)
@@ -612,8 +620,8 @@ def testCompletion(output_file, output_dir = os.getcwd()):
     
 
 
-def main(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), multilook = 2, output_name = 'processed', speckle_filter = False, short_chain = False, gpt = '~/snap/bin/gpt', verbose = False):
-    """main(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), multilook = 2, speckle_filter = False, short_chain = False, gpt = '~/snap/bin/gpt', verbose = False)
+def main(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), multilook = 2, output_name = 'processed', speckle_filter = False, short_chain = False, noorbit = False, gpt = '~/snap/bin/gpt', verbose = False):
+    """main(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), multilook = 2, output_name = 'processed', speckle_filter = False, short_chain = False, noorbit = False, gpt = '~/snap/bin/gpt', verbose = False)
     
     Preprocess Sentinel-1 GRD IW data from the Copernicus Open Access Data Hub. This functon takes a list of Sentinel-1 input files, and uses the SNAP graph processing tool to generate radiometric/terrain corrected images.
     
@@ -625,6 +633,7 @@ def main(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), multilook = 
         output_name: Name to put in output files for identification. Defaults to 'processed'.
         speckle_filter: Set True to include a Refined Lee speckle filter.
         short_chain: Set True to run a shorter processing chain that omits some optional preprocessing steps at the expense of output quality.
+        noorbit: Set True to skip the downloading of a precise Sentinel-1 orbit file.
         gpt: Path to SNAP graph processing tool. Defaults to ~/snap/bin/gpt.
         verbose: Set True to print progress.
     
@@ -635,7 +644,7 @@ def main(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), multilook = 
     # TODO: Insert assert statements to cleanse inputs. In particular, ensure infiles are appropriate.
     
     # Process input files
-    output_file = processFiles(infiles, output_dir = output_dir, temp_dir = temp_dir, multilook = multilook, output_name = output_name, speckle_filter = speckle_filter, short_chain = short_chain, gpt = gpt, verbose = verbose)
+    output_file = processFiles(infiles, output_dir = output_dir, temp_dir = temp_dir, multilook = multilook, output_name = output_name, speckle_filter = speckle_filter, short_chain = short_chain, noorbit = noorbit, gpt = gpt, verbose = verbose)
     
     # Test that output file has been generated correctly.
     if testCompletion(output_file, output_dir = output_dir) == False:
@@ -675,6 +684,7 @@ if __name__ == '__main__':
     optional.add_argument('-m', '--multilook', metavar = 'N', type = int, default = 2, help = "Multilooking reduces image noise by degrading output resolution from ~10 x 10 m by a factor. Defaults to 2 (~20 x 20 m output).")
     optional.add_argument('-f', '--speckle_filter', action = 'store_true', help = "Apply a speckle filter (Refined Lee) to output images.")
     optional.add_argument('-s', '--short', action = 'store_true', help = "Perform a more rapid processing chain, ommitting some nonessential preprocessing steps.")
+    optional.add_argument('-no', '--noorbit', action = 'store_true', help = "Skip downloading of a precise orbit file."
     optional.add_argument('-g', '--gpt', metavar = 'PATH', type = str, default = '~/snap/bin/gpt', help='Path to graph processing tool. Defaults to ~/snap/bin/gpt.')
     optional.add_argument('-v', '--verbose', action = 'store_true', help = "Print script progress.")
     optional.add_argument('-p', '--processes', type = int, metavar = 'N', default = 1, help = "Specify a maximum number of tiles to process in paralell. Note: more processes will require more resources. Defaults to 1.")
@@ -704,11 +714,11 @@ if __name__ == '__main__':
         for input_files in infiles_split:
         
             # Execute module
-            main(input_files, output_dir = args.output_dir, temp_dir = args.temp_dir, multilook = args.multilook, output_name = args.output_name, speckle_filter = args.speckle_filter, short_chain = args.short, gpt = args.gpt, verbose = args.verbose)
+            main(input_files, output_dir = args.output_dir, temp_dir = args.temp_dir, multilook = args.multilook, output_name = args.output_name, speckle_filter = args.speckle_filter, short_chain = args.short, noorbit = args.noorbit, gpt = args.gpt, verbose = args.verbose)
     
     else:
         
-        main_partial = functools.partial(main, output_dir = args.output_dir, temp_dir = args.temp_dir, multilook = args.multilook, output_name = args.output_name, speckle_filter = args.speckle_filter, short_chain = args.short, gpt = args.gpt, verbose = args.verbose)
+        main_partial = functools.partial(main, output_dir = args.output_dir, temp_dir = args.temp_dir, multilook = args.multilook, output_name = args.output_name, speckle_filter = args.speckle_filter, short_chain = args.short, noorbit = args.noorbit, gpt = args.gpt, verbose = args.verbose)
                     
         _run_workers(args.processes, infiles_split)
 
