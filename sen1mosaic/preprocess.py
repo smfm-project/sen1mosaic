@@ -684,7 +684,7 @@ if __name__ == '__main__':
     optional.add_argument('-m', '--multilook', metavar = 'N', type = int, default = 2, help = "Multilooking reduces image noise by degrading output resolution from ~10 x 10 m by a factor. Defaults to 2 (~20 x 20 m output).")
     optional.add_argument('-f', '--speckle_filter', action = 'store_true', help = "Apply a speckle filter (Refined Lee) to output images.")
     optional.add_argument('-s', '--short', action = 'store_true', help = "Perform a more rapid processing chain, ommitting some nonessential preprocessing steps.")
-    optional.add_argument('-no', '--noorbit', action = 'store_true', help = "Skip downloading of a precise orbit file."
+    optional.add_argument('-no', '--noorbit', action = 'store_true', help = "Skip downloading of a precise orbit file.")
     optional.add_argument('-g', '--gpt', metavar = 'PATH', type = str, default = '~/snap/bin/gpt', help='Path to graph processing tool. Defaults to ~/snap/bin/gpt.')
     optional.add_argument('-v', '--verbose', action = 'store_true', help = "Print script progress.")
     optional.add_argument('-p', '--processes', type = int, metavar = 'N', default = 1, help = "Specify a maximum number of tiles to process in paralell. Note: more processes will require more resources. Defaults to 1.")
