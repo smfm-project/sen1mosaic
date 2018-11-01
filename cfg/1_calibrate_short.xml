@@ -29,10 +29,21 @@
       <trimThreshold>0.5</trimThreshold>
     </parameters>
   </node>
+  <node id="ThermalNoiseRemoval">
+    <operator>ThermalNoiseRemoval</operator>
+    <sources>
+      <sourceProduct refid="Remove-GRD-Border-Noise"/>
+    </sources>
+    <parameters class="com.bc.ceres.binding.dom.XppDomElement">
+      <selectedPolarisations/>
+      <removeThermalNoise>true</removeThermalNoise>
+      <reIntroduceThermalNoise>false</reIntroduceThermalNoise>
+    </parameters>
+  </node>
   <node id="Calibration">
     <operator>Calibration</operator>
     <sources>
-      <sourceProduct refid="Remove-GRD-Border-Noise"/>
+      <sourceProduct refid="ThermalNoiseRemoval"/>
     </sources>
     <parameters class="com.bc.ceres.binding.dom.XppDomElement">
       <sourceBands/>
@@ -65,6 +76,9 @@
     </node>
     <node id="Calibration">
       <displayPosition x="492.0" y="128.0"/>
+    </node>
+    <node id="ThermalNoiseRemoval">
+      <displayPosition x="356.0" y="128.0"/>
     </node>
     <node id="Remove-GRD-Border-Noise">
       <displayPosition x="256.0" y="128.0"/>
