@@ -148,7 +148,7 @@ class LoadScene(object):
         Test whethere S1 file is single ('S1single') or dual ('S1dual') polarised 
         '''
         
-        if len(glob.glob(self.filename.split('.dim')[0] +'.data/Gamma0_VH*.img')) > 0:
+        if len(glob.glob(self.filename.split('.dim')[0] +'.data/*0_VH*.img')) > 0:
             image_type = 'S1dual'
         else:
             image_type = 'S1single'
@@ -175,7 +175,7 @@ class LoadScene(object):
 
         # Identify source file following the standardised file pattern
         
-        image_path = glob.glob(self.filename.split('.dim')[0]+'.data/Gamma0_%s*.img'%pol)
+        image_path = glob.glob(self.filename.split('.dim')[0]+'.data/*0_%s*.img'%pol)
         
         if len(image_path) == 0:
             raise IOError
