@@ -71,6 +71,14 @@ It's a good idea to increase the memory allocation to SNAP. This is controlled b
        
     echo '-Xmx8G' >> ~/snap/bin/gpt.vmoptions
 
+Some SNAP operators are currently having trouble with the latest Sentinel-1 data (after March 2018). This can be fixed by installing updated through the SNAP GUI (``Help >> Check for Updates``), or with the following lines in the terminal:
+
+.. code-block:: console
+    snap --nosplash --nogui --modules --update-all 2>&1 | while read -r line; do
+        echo "$line"
+        [ "$line" = "updates=0" ] && sleep 2 && pkill -TERM -f "snap/jre/bin/java"
+    done
+
 For further details and up-to-date installation instructions, see the `SNAP website <http://step.esa.int/main/toolboxes/snap/>`_.
 
 
