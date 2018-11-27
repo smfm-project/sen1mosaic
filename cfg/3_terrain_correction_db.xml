@@ -8,10 +8,25 @@
       <formatName>BEAM-DIMAP</formatName>
     </parameters>
   </node>
+  <node id="Terrain-Flattening">
+    <operator>Terrain-Flattening</operator>
+    <sources>
+      <sourceProduct refid="Read"/>
+    </sources>
+    <parameters class="com.bc.ceres.binding.dom.XppDomElement">
+      <sourceBands/>
+      <demName>SRTM 1Sec HGT</demName>
+      <demResamplingMethod>BILINEAR_INTERPOLATION</demResamplingMethod>
+      <externalDEMFile/>
+      <externalDEMNoDataValue>0.0</externalDEMNoDataValue>
+      <outputSimulatedImage>false</outputSimulatedImage>
+      <reGridMethod>false</reGridMethod>
+    </parameters>
+  </node>
   <node id="Subset">
     <operator>Subset</operator>
     <sources>
-      <sourceProduct refid="Read"/>
+      <sourceProduct refid="Terrain-Flattening"/>
     </sources>
     <parameters class="com.bc.ceres.binding.dom.XppDomElement">
       <sourceBands/>
@@ -58,10 +73,19 @@
       <externalAuxFile/>
     </parameters>
   </node>
+  <node id="LinearToFromdB">
+    <operator>LinearToFromdB</operator>
+    <sources>
+      <sourceProduct refid="Terrain-Correction"/>
+    </sources>
+   <parameters class="com.bc.ceres.binding.dom.XppDomElement">
+      <sourceBands/>
+    </parameters>
+  </node>
   <node id="Write">
     <operator>Write</operator>
     <sources>
-      <sourceProduct refid="Terrain-Correction"/>
+      <sourceProduct refid="LinearToFromdB"/>
     </sources>
     <parameters class="com.bc.ceres.binding.dom.XppDomElement">
       <file>${outputfile}</file>
@@ -72,11 +96,18 @@
     <Description/>
     <node id="Write">
             <displayPosition x="455.0" y="135.0"/>
+    </node>
+    <node id="LinearToFromdB">
+            <displayPosition x="355.0" y="135.0"/>
+    </node>
     <node id="Terrain-Correction">
       <displayPosition x="290.0" y="116.0"/>
     </node>
     <node id="Subset">
       <displayPosition x="200.0" y="116.0"/>
+    </node>
+    <node id="Terrain-Flattening">
+      <displayPosition x="273.0" y="159.0"/>
     </node>
     <node id="Read">
             <displayPosition x="28.0" y="16.0"/>

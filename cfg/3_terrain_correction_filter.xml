@@ -93,19 +93,10 @@
       <externalAuxFile/>
     </parameters>
   </node>
-  <node id="LinearToFromdB">
-    <operator>LinearToFromdB</operator>
-    <sources>
-      <sourceProduct refid="Terrain-Correction"/>
-    </sources>
-   <parameters class="com.bc.ceres.binding.dom.XppDomElement">
-      <sourceBands/>
-    </parameters>
-  </node>
   <node id="Write">
     <operator>Write</operator>
     <sources>
-      <sourceProduct refid="LinearToFromdB"/>
+      <sourceProduct refid="Terrain-Correction"/>
     </sources>
     <parameters class="com.bc.ceres.binding.dom.XppDomElement">
       <file>${outputfile}</file>
@@ -116,9 +107,6 @@
     <Description/>
     <node id="Write">
             <displayPosition x="455.0" y="135.0"/>
-    </node>
-    <node id="LinearToFromdB">
-            <displayPosition x="355.0" y="135.0"/>
     </node>
     <node id="Terrain-Correction">
       <displayPosition x="290.0" y="116.0"/>
