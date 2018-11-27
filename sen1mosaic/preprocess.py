@@ -412,7 +412,7 @@ def correctionGraph(infile, outfile, output_dir = os.getcwd(), multilook = 2, sp
     
     if output_units == 'decibels': xmlfile = xmlfile[:-4] + '_db.xml'
     if speckle_filter: xmlfile = xmlfile[:-4] + '_filter.xml'
-    if short_chain: xmlfile = xmlfile[:-4] + '_filter.xml'
+    if short_chain: xmlfile = xmlfile[:-4] + '_short.xml'
     
     # Prepare command
     command = [gpt, xmlfile, '-x', '-Pinputfile=%s'%infile, '-Poutputfile=%s'%output_file, '-Pextent=%s'%extent]
