@@ -106,7 +106,12 @@ sen1mosaic can be downloaded to a machine from its `repository<https://bitbucket
 
     git clone https://sambowers@bitbucket.org/sambowers/sen1mosaic.git
 
+To avoid having to reference the full path of the Python scripts in sen1mosaic, it's a good idea add the following line to your ``.bashrc`` file:
 
+.. code-block:: console
+
+    echo "alias s1m='_s1m() { python ~/sen1mosaic/sen1mosaic/\"\$1\".py \$(shift; echo \"\$@\") ;}; _s1m'" >> ~/.bashrc
+    
 Where do I get help?
 --------------------
 
