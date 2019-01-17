@@ -54,8 +54,8 @@ To install SNAP, open a terminal window, change directory to the location you'd 
 
 .. code-block:: console
 
-    wget http://step.esa.int/downloads/5.0/installers/esa-snap_sentinel_unix_5_0.sh
-    bash esa-snap_sentinel_unix_5_0.sh
+    wget http://step.esa.int/downloads/6.0/installers/esa-snap_sentinel_unix_6_0.sh
+    bash esa-snap_sentinel_unix_6_0.sh
     
 ...and follow the instructions. The default installation instructions should work fine with sen1mosaic.
 
