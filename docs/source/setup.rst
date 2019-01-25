@@ -111,6 +111,11 @@ To avoid having to reference the full path of the Python scripts in sen1mosaic, 
 .. code-block:: console
 
     echo "alias s1m='_s1m() { python ~/sen1mosaic/sen1mosaic/\"\$1\".py \$(shift; echo \"\$@\") ;}; _s1m'" >> ~/.bashrc
+
+Installing sen2mosaic
+---------------------
+
+sen1mosaic makes use of some of the functons of sen2mosaic. To install sen2mosaic, follow the instructions `here <https://sen2mosaic.readthedocs.io/>`_.
     
 Where do I get help?
 --------------------
