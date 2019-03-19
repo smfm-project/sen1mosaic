@@ -8,6 +8,8 @@ import os
 import pandas
 import time
 
+import pdb
+
 def connectToAPI(username, password):
     '''
     Connect to the SciHub API with sentinelsat. Sign up at https://scihub.copernicus.eu/.
@@ -70,13 +72,15 @@ def search(search_area, start = '20140403', end = datetime.datetime.today().strf
     
     # Build a POLYGON wkt
     search_polygon = _buildWkt(search_area)
-
+    
     # Search data, filtering by options.
     products = scihub_api.query(search_polygon, beginposition = (startdate,enddate),
                          platformname = 'Sentinel-1', producttype = 'GRD', orbitdirection = direction, sensoroperationalmode = 'IW')
 
     # convert to Pandas DataFrame, which can be searched modified before commiting to download()
     products_df = scihub_api.to_dataframe(products)
+    
+    if products_df.empty: raise IOError("No products found. Check your search terms.")
     
     return products_df
 
@@ -122,7 +126,7 @@ def download(products_df, output_dir = os.getcwd()):
     assert os.path.isdir(output_dir), "Output directory doesn't exist."
     
     if products_df.empty == True:
-        print 'WARNING: No products found to download. Check your search terms.'
+        raise IOError("No products found. Check your search terms.")
         
     else:
         
