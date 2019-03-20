@@ -346,7 +346,7 @@ def main(source_files, extent_dest, EPSG_dest, output_res = 20, pol = 'both', st
        
     # Get metadata for output dictionary
     md_dest = sen2mosaic.utilities.Metadata(extent_dest, output_res, EPSG_dest)    
-        
+    
     # Keep track of output filenames
     filenames = []
     
@@ -362,7 +362,7 @@ def main(source_files, extent_dest, EPSG_dest, output_res = 20, pol = 'both', st
         scenes = utilities.sortScenes(scenes)
         
         # Reduce the pool of scenes to only those that overlap with output tile
-        scenes_tile = utilities.getSourceFilesInTile(scenes, md_dest, pol = pol, start = start, end = end, verbose = verbose)       
+        scenes_tile = utilities.getSourceFilesInTile(scenes, md_dest, pol = pol, start = start, end = end, verbose = verbose)
         
         # It's only worth processing a tile if at least one input image is inside tile
         if len(scenes_tile) == 0:
@@ -416,7 +416,7 @@ if __name__ == "__main__":
     optional.add_argument('-n', '--output_name', type=str, metavar = 'NAME', default = 'S1_output', help="Optionally specify a string to precede output filename.")
     optional.add_argument('-p', '--pol', type=str, metavar = 'POL', default = 'both', help="Specify a single polarisation ('VV' or 'VH') or 'both'. Defaults to processing both.")
     optional.add_argument('-v', '--verbose', action = 'store_true', help = "Print script progress.")
-
+    
     # Get arguments
     args = parser.parse_args()
     

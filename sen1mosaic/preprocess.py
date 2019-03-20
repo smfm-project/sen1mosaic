@@ -185,6 +185,39 @@ def _prepInfiles(infiles):
     
     return infiles_reduced
 
+def reduceFilesToTimePeriod(infiles, start, end):
+    '''
+    Use Sentinel-1 metadata from filenames to determine which files should be included.
+    
+    Args:
+        infiles: A list of Sentinel-1 .zip files
+        start: Start date of files to include, in the format 'YYYYMMDD'
+        end: End date of files to include, in the format 'YYYYMMDD'
+    
+    Returns:
+        A reduced list of files that are betwee start and end dates (inclusive).
+    '''
+    
+    # Convert to datetime object             
+    start = datetime.datetime.strptime(start,'%Y%m%d')
+    end = datetime.datetime.strptime(end,'%Y%m%d')
+    
+    outfiles = []
+    
+    for infile in infiles:
+        datestring = infile.split('_')[-4].split('T')[0]
+        this_date = datetime.datetime.strptime(datestring, '%Y%m%d')
+        
+        # Inclusive of current date
+        if this_date > end:
+            continue
+        if this_date < start:
+            continue
+        
+        outfiles.append(infile)
+    
+    return outfiles
+
 
 def getContiguousImages(infiles):
     '''
@@ -633,7 +666,7 @@ def main(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), multilook = 
         speckle_filter: Set True to include a Refined Lee speckle filter.
         short_chain: Set True to run a shorter processing chain that omits some optional preprocessing steps at the expense of output quality.
         noorbit: Set True to skip the downloading of a precise Sentinel-1 orbit file.
-        output_units: Units to output data, either in decibels or natural units
+        output_units: Units to output data, either in decibels or natural units.
         gpt: Path to SNAP graph processing tool. Defaults to ~/snap/bin/gpt.
         verbose: Set True to print progress.
     
@@ -642,6 +675,8 @@ def main(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), multilook = 
     """
     
     # TODO: Insert assert statements to cleanse inputs. In particular, ensure infiles are appropriate.
+        
+    if len(infiles) == 0: "No files meeting date criteria found"
     
     # Process input files
     output_file = processFiles(infiles, output_dir = output_dir, temp_dir = temp_dir, multilook = multilook, output_name = output_name, speckle_filter = speckle_filter, short_chain = short_chain, noorbit = noorbit, output_units = output_units, gpt = gpt, verbose = verbose)
@@ -687,6 +722,8 @@ if __name__ == '__main__':
     optional.add_argument('-s', '--short', action = 'store_true', help = "Perform a more rapid processing chain, ommitting some nonessential preprocessing steps.")
     optional.add_argument('-no', '--noorbit', action = 'store_true', help = "Skip downloading of a precise orbit file.")
     optional.add_argument('-g', '--gpt', metavar = 'PATH', type = str, default = '~/snap/bin/gpt', help='Path to graph processing tool. Defaults to ~/snap/bin/gpt.')
+    optional.add_argument('-st', '--start', type = str, default = '20140101', help = "Start date for tiles to include in format YYYYMMDD. Defaults to processing all dates.")
+    optional.add_argument('-en', '--end', type = str, default = datetime.datetime.today().strftime('%Y%m%d'), help = "End date for tiles to include in format YYYYMMDD. Defaults to processing all dates.")
     optional.add_argument('-v', '--verbose', action = 'store_true', help = "Print script progress.")
     optional.add_argument('-p', '--processes', type = int, metavar = 'N', default = 1, help = "Specify a maximum number of tiles to process in paralell. Note: more processes will require more resources. Defaults to 1.")
 
@@ -699,12 +736,15 @@ if __name__ == '__main__':
     # Extract all eligible input files (.zip, or directory containing .zip)
     infiles = _prepInfiles(args.infiles)
     
+    # Slim down files to those within date range
+    infiles = reduceFilesToTimePeriod(infiles, args.start, args.end)
+    
     assert len(infiles) > 0, "No valid input files detected."
-        
+    
     # Convert arguments to absolute paths    
     infiles = np.array(sorted([os.path.abspath(i) for i in infiles])) # Also sort, and convert to an array.
     output_dir = os.path.abspath(args.output_dir)
-    temp_dir = os.path.abspath(args.temp_dir)
+    temp_dir = os.path.abspath(args.temp_dir)   
     
     # Determine which images should be processed together as one contiguous overpass
     infiles_split = splitFiles(infiles, args.max_scenes, overlap = False)

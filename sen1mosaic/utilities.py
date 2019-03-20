@@ -307,7 +307,8 @@ def getSourceFilesInTile(source_files, md_dest, pol = 'VV', start = '20140101', 
         start = datetime.datetime.strptime(start,'%Y%m%d')
         end = datetime.datetime.strptime(end,'%Y%m%d')
         
-        if scene.datetime > end:
+        # Inclusive of current date
+        if scene.datetime > end + datetime.timedelta(1):
             return True
         if scene.datetime < start:
             return True
@@ -336,7 +337,7 @@ def getSourceFilesInTile(source_files, md_dest, pol = 'VV', start = '20140101', 
     do_tile = []
     
     for source_file in source_files:
-                        
+        
         # Skip processing the file if image falls outside of tile area
         if testOutsideTile(source_file.metadata, md_dest):
             do_tile.append(False)
