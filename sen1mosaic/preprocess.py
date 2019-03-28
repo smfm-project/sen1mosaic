@@ -133,8 +133,8 @@ def _runCommand(command, verbose = False):
         text = p.communicate()[0]
                 
         if p.wait():
-            raise Exception('Command failed: %s'%' '.join(command)) 
             print text
+            raise Exception('Command failed: %s'%' '.join(command)) 
         
     finally:
         # Reset handler
