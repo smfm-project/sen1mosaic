@@ -133,7 +133,7 @@ def _runCommand(command, verbose = False):
         text = p.communicate()[0]
                 
         if p.wait():
-            print text
+            print "Command failed :("
             raise Exception('Command failed: %s'%' '.join(command)) 
         
     finally:
