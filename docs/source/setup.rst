@@ -8,6 +8,7 @@ This toolset is written for use in Linux.
 
 You will need access to a PC or server with at least:
 
+* Python 3
 * 8 GB of RAM to run SNAP.
 * 8+ GB of RAM to combine images into a mosaic tile (depending on resolution/extent).
 
@@ -33,17 +34,22 @@ If this has functioned, on executing ``python`` in a terminal window, you should
     Type "help", "copyright", "credits" or "license" for more information.
     >>> 
 
-sen1mosaic requires the gdal module to be installed. At the time of writing, it can be installed using the commands:
+Setting up your Anaconda environment
+------------------------------------
+
+.. note:: The Anaconda environment required for sen1mosaic and sen2mosaic is identical. If you already have a sen2mosaic environment set up, it can be used in place of a new environment.
+
+To ensure you are working with the appropriate version of Python as well as the correct modules, we recommend that you create an Anaconda virtual environment set up for running ``sen1mosaic``. This is done by running the following commands in your terminal or the Anaconda prompt (recommended procedure):
 
 .. code-block:: console
     
-    conda install -c anaconda gdal
+    conda create -n sen1mosaic -c conda-forge python=3.7 scipy pandas psutil scikit-image gdal opencv
 
-If successful, on opening a new terminal and running ``python`` you should be able to import the gdal without error:
+Activate the ``sen1mosaic`` environment whenever opening a new terminal window by running this command:
 
-.. code-block:: python
-
-    >>> from osgeo import gdal
+.. code-block:: console
+    
+    conda activate sen1mosaic
 
 Installing SNAP
 ---------------
@@ -71,14 +77,11 @@ It's a good idea to increase the memory allocation to SNAP. This is controlled b
     
     echo '-Xmx8G' >> ~/snap/bin/gpt.vmoptions
 
-Some SNAP operators are currently having trouble with the latest Sentinel-1 data (after March 2018). This can be fixed by installing updated through the SNAP GUI (``Help >> Check for Updates``), or with the following lines in the terminal:
+Some SNAP operations are currently having trouble with the latest Sentinel-1 data (after March 2018). This can be fixed by installing updated through the SNAP GUI (``Help >> Check for Updates``), or with the following line in the terminal:
 
 .. code-block:: console
     
-    snap --nosplash --nogui --modules --update-all 2>&1 | while read -r line; do
-        echo "$line"
-        [ "$line" = "updates=0" ] && sleep 2 && pkill -TERM -f "snap/jre/bin/java"
-    done
+    snap --nosplash --nogui --modules --update-all
 
 For further details and up-to-date installation instructions, see the `SNAP website <http://step.esa.int/main/toolboxes/snap/>`_.
 
@@ -96,7 +99,6 @@ At the time of writing, the installation process is as follows:
 
     pip install sentinelsat
 
-
 Installing sen1mosaic
 ---------------------
 
@@ -105,6 +107,12 @@ sen1mosaic can be downloaded to a machine from its `repository<https://bitbucket
 .. code-block:: console
 
     git clone https://sambowers@bitbucket.org/sambowers/sen1mosaic.git
+
+To install sen1mosaic, navigate to the sen1mosaic directory and run the following within your sen1mosaic environment
+
+.. code-block:: console
+    
+    python setup.py install
 
 To avoid having to reference the full path of the Python scripts in sen1mosaic, it's a good idea add the following line to your ``.bashrc`` file:
 
@@ -115,8 +123,23 @@ To avoid having to reference the full path of the Python scripts in sen1mosaic, 
 Installing sen2mosaic
 ---------------------
 
-sen1mosaic makes use of some of the functons of sen2mosaic. To install sen2mosaic, follow the instructions `here <https://sen2mosaic.readthedocs.io/>`_.
+sen1mosaic makes use of some of the functons of sen2mosaic. To install sen2mosaic:
+
+.. code-block:: console
+
+    git clone https://sambowers@bitbucket.org/sambowers/sen2mosaic.git
+
+To install sen2mosaic, navigate to the sen2mosaic directory and run the following within your sen2mosaic environment
+
+.. code-block:: console
     
+    python setup.py install
+
+Is there a Dockerfile?
+----------------------
+
+Coming soon!
+
 Where do I get help?
 --------------------
 

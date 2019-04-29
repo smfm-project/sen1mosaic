@@ -178,13 +178,13 @@ def generateDataArray(scenes, pol, md_dest, output_dir = os.getcwd(), output_nam
     # For each source file
     for n, scene in enumerate(scenes):
         
-        if verbose: print '    Adding pixels from %s'%scene.filename.split('/')[-1]
+        if verbose: print('    Adding pixels from %s'%scene.filename.split('/')[-1])
         
         
         # Update output arrays if we're finished with the previous date. Skip on first iteration as there's no data yet.
         if n != 0:
             if scene.datetime.date() != last_date:
-                data_num = _updateDataArray(data_num, (data_date != 0) * 1, action = 'sum')
+                data_num = _updateDataArray(data_num, (data_date != 0.) * 1, action = 'sum')
                 data_sum = _updateDataArray(data_sum, data_date, action = 'sum')
                 data_var = _updateDataArray(data_var, data_date ** 2, action = 'sum')
                 data_min = _updateDataArray(data_min, data_date, action = 'min')
@@ -204,7 +204,7 @@ def generateDataArray(scenes, pol, md_dest, output_dir = os.getcwd(), output_nam
         ds_dest = None
    
     # Update output arrays on final loop
-    data_num = _updateDataArray(data_num, (data_date != 0) * 1, action = 'sum')
+    data_num = _updateDataArray(data_num, (data_date != 0.) * 1, action = 'sum')
     data_sum = _updateDataArray(data_sum, data_date, action = 'sum')
     data_var = _updateDataArray(data_var, data_date ** 2, action = 'sum')
     data_min = _updateDataArray(data_min, data_date, action = 'min')
@@ -222,7 +222,7 @@ def generateDataArray(scenes, pol, md_dest, output_dir = os.getcwd(), output_nam
     data_std = np.sqrt(data_std)
     data_std[data_num < 2] = 0.
     
-    if verbose: print 'Outputting polarisation %s'%pol
+    if verbose: print('Outputting polarisation %s'%pol)
     
     # Generate default output filename
     filename = '%s/%s_%s_%s_R%sm.tif'%(output_dir, output_name, '%s', pol, str(md_dest.res))
@@ -353,7 +353,7 @@ def main(source_files, extent_dest, EPSG_dest, output_res = 20, pol = 'both', st
     # Process images for each polarisation
     for pol in pol_list:
                 
-        if verbose: print 'Doing polarisation %s'%pol
+        if verbose: print('Doing polarisation %s'%pol)
         
         # Load metadata for all Sentinel-1 datasets
         scenes = [utilities.LoadScene(source_file) for source_file in source_files]
@@ -366,7 +366,7 @@ def main(source_files, extent_dest, EPSG_dest, output_res = 20, pol = 'both', st
         
         # It's only worth processing a tile if at least one input image is inside tile
         if len(scenes_tile) == 0:
-            print "    No data inside specified tile for polarisation %s. Skipping."%pol
+            print("    No data inside specified tile for polarisation %s. Skipping."%pol)
             continue
         
         # Combine pixels into output images for each band
@@ -379,7 +379,7 @@ def main(source_files, extent_dest, EPSG_dest, output_res = 20, pol = 'both', st
     if pol_list.tolist() == ['VV','VH'] and len(filenames) > 1:
         
         # Build VRT output files for straightforward visualisation
-        if verbose: print 'Building .VRT images for visualisation.'
+        if verbose: print('Building .VRT images for visualisation.')
         
         # Build a VV/VH image
         filename_VVVH = buildVVVH(filenames[pol_list.tolist().index('VV')]%'mean', filenames[pol_list.tolist().index('VH')]%'mean', output_dir = output_dir, output_name = output_name)
@@ -391,7 +391,7 @@ def main(source_files, extent_dest, EPSG_dest, output_res = 20, pol = 'both', st
         # Build an alternative false colour composite image
         buildVRT(filenames[pol_list.tolist().index('VV')]%'min', filenames[pol_list.tolist().index('VH')]%'min', filenames[pol_list.tolist().index('VV')]%'stdev','%s/%s_VVmin_VHmin_VVstdev_R%s.vrt'%(output_dir, output_name, str(output_res)))
     
-    if verbose: print 'Processing complete!'
+    if verbose: print('Processing complete!')
 
 
 if __name__ == "__main__":

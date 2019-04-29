@@ -1,5 +1,9 @@
 # README #
 
+### Latest updates ###
+
+* Now compatable with Python 3. It should remain possible to run these scripts with Python 2, but this will no longer be supported.
+
 ### What is this repository for? ###
 
 Building large-scale mosaics of Sentinel-1 data for land cover mapping is difficult, with existing tools still under-development and frequently confusing.
@@ -7,7 +11,6 @@ Building large-scale mosaics of Sentinel-1 data for land cover mapping is diffic
 This is a set of tools to aid in the production of large-scale seasonal mosaic products from Sentinel-1 data. The goal is to streamline this processing chain with a set of straightforward command line tools.
 
 This repository contains three command-line based scripts to perform the following tasks:
-
 
 * Downloading Sentinel-1 data from the [Copernicus Open Access Hub](https://scihub.copernicus.eu/) for a particular latitude/longitude window, specifying date ranges and ascending/descending orbits. This is based on the [Sentinelsat](https://github.com/sentinelsat/sentinelsat) utility.
 * Executing [SNAP](http://step.esa.int/main/toolboxes/snap/) graph processing tool to calibrate, filter and perform terrain-correction on Sentinel-1 GRD images.

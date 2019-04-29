@@ -4,144 +4,14 @@ import argparse
 import datetime
 import functools
 import glob
-import multiprocessing
 import numpy as np
 import os
-import signal
-import subprocess
 import sys
 import time
 
+import sen2mosaic.multiprocess
+
 import pdb
-
-
-### Functions to enable command line interface with multiprocessing
-
-def _do_work(job_queue, counter=None):
-    """
-    Processes jobs from  the multiprocessing queue until all jobs are finished
-    Adapted from: https://github.com/ikreymer/cdx-index-client
-    
-    Args:
-        job_queue: multiprocessing.Queue() object
-        counter: multiprocessing.Value() object
-    """
-    
-    import Queue
-        
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
-    
-    while not job_queue.empty():
-        try:
-            job = job_queue.get_nowait()
-            
-            main_partial(job)
-
-            num_done = 0
-            with counter.get_lock():
-                counter.value += 1
-                num_done = counter.value
-                
-        except Queue.Empty:
-            pass
-
-        except KeyboardInterrupt:
-            break
-
-        except Exception:
-            if not job:
-                raise
-
-
-def _run_workers(n_processes, jobs):
-    """
-    This script is a queuing system that respects KeyboardInterrupt.
-    Adapted from: https://github.com/ikreymer/cdx-index-client
-    Which in turn was adapted from: http://bryceboe.com/2012/02/14/python-multiprocessing-pool-and-keyboardinterrupt-revisited/
-    
-    Args:
-        n_processes: Number of parallel processes
-        jobs: List of input tiles for sen2cor
-    """
-    
-    import psutil 
-    
-    # Queue up all jobs
-    job_queue = multiprocessing.Queue()
-    counter = multiprocessing.Value('i', 0)
-    
-    for job in jobs:
-        job_queue.put(job)
-    
-    workers = []
-    
-    for i in xrange(0, n_processes):
-        
-        tmp = multiprocessing.Process(target=_do_work, args=(job_queue, counter))
-        tmp.daemon = True
-        tmp.start()
-        workers.append(tmp)
-
-    try:
-        
-        for worker in workers:
-            worker.join()
-            
-    except KeyboardInterrupt:
-        for worker in workers:
-            print 'Keyboard interrupt (ctrl-c) detected. Exiting all processes.'
-            # This is an impolite way to kill the process, built to circumvent the intransigence of sen2cor.
-            parent = psutil.Process(worker.pid)
-            children = parent.children(recursive=True)
-            parent.send_signal(signal.SIGKILL)
-            for process in children:
-                process.send_signal(signal.SIGKILL)
-            worker.terminate()
-            worker.join()
-            
-        raise
-
-
-def _runCommand(command, verbose = False):
-    """
-    Function to capture KeyboardInterrupt.
-    Idea from: https://stackoverflow.com/questions/38487972/target-keyboardinterrupt-to-subprocess
-
-    Args:
-        command: A list containing a command for subprocess.Popen().
-    """
-    
-    try:
-        p = None
-
-        # Register handler to pass keyboard interrupt to the subprocess
-        def handler(sig, frame):
-            if p:
-                p.send_signal(signal.SIGINT)
-            else:
-                raise KeyboardInterrupt
-                
-        signal.signal(signal.SIGINT, handler)
-        
-        #p = subprocess.Popen(command)
-        p = subprocess.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
-        
-        if verbose:
-            for stdout_line in iter(p.stdout.readline, ""):
-                print stdout_line
-        
-        text = p.communicate()[0]
-                
-        if p.wait():
-            print "Command failed :("
-            raise Exception('Command failed: %s'%' '.join(command)) 
-        
-    finally:
-        # Reset handler
-        signal.signal(signal.SIGINT, signal.SIG_DFL)
-    
-    return text.decode('utf-8').split('/n')
-
 
 
 ### Functions for command line interface.
@@ -291,7 +161,7 @@ def splitFiles(infiles, max_scenes, overlap = False):
             else:
                 n = max_scenes
             
-            these_infiles_split = [these_infiles[i:i+max_scenes].tolist() for i in xrange(0,these_infiles.shape[0], n)]
+            these_infiles_split = [these_infiles[i:i+max_scenes].tolist() for i in range(0,these_infiles.shape[0], n)]
             
             # This catches case where only one overlapping file is included
             if overlap:
@@ -355,10 +225,10 @@ def calibrateGraph(infile, temp_dir = os.getcwd(), short_chain = False, noorbit 
     # Prepare command
     command = [gpt, xmlfile, '-x', '-Pinputfile=%s'%infile, '-Poutputfile=%s'%outfile]
     
-    if verbose: print 'Executing: %s'%' '.join(command)
+    if verbose: print('Executing: %s'%' '.join(command))
     
     # Execute chain
-    output_text = _runCommand(command, verbose = verbose)
+    output_text = sen2mosaic.multiprocess.runCommand(command, verbose = verbose)
     
     return outfile + '.dim'
 
@@ -403,10 +273,10 @@ def multilookGraph(infiles, multilook = 2, gpt = '~/snap/bin/gpt', verbose = Fal
     # Prepare command
     command = [gpt, xmlfile, '-x', '-Pinputfiles=%s'%infiles_formatted, '-Poutputfile=%s'%outfile, '-Pmultilook=%s'%str(multilook)]
     
-    if verbose: print 'Executing: %s'%' '.join(command)
+    if verbose: print('Executing: %s'%' '.join(command))
     
     # Execute chain
-    output_text = _runCommand(command, verbose = verbose)
+    output_text = sen2mosaic.multiprocess.runCommand(command, verbose = verbose)
     
     return outfile
 
@@ -451,10 +321,10 @@ def correctionGraph(infile, outfile, output_dir = os.getcwd(), multilook = 2, sp
     # Prepare command
     command = [gpt, xmlfile, '-x', '-Pinputfile=%s'%infile, '-Poutputfile=%s'%output_file, '-Pextent=%s'%extent]
     
-    if verbose: print 'Executing: %s'%' '.join(command)
+    if verbose: print('Executing: %s'%' '.join(command))
     
     # Execute chain
-    output_text = _runCommand(command, verbose = verbose)
+    output_text = sen2mosaic.multiprocess.runCommand(command, verbose = verbose)
     
     return output_file
 
@@ -606,16 +476,16 @@ def processFiles(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), mult
     
     # Tidy up by deleting temporary intermediate files.
     for this_file in preprocess_files:
-        if verbose: print 'Removing %s'%this_file
+        if verbose: print('Removing %s'%this_file)
         os.system('rm %s'%this_file)
         os.system('rm -r %s.data'%this_file[:-4])
             
-    if verbose: print 'Removing %s'%mtl_file[:-4]
+    if verbose: print('Removing %s'%mtl_file[:-4])
     os.system('rm %s'%mtl_file)
     os.system('rm -r %s.data'%mtl_file[:-4])
     
     
-    if verbose: print 'Done!'
+    if verbose: print('Done!')
     
     return output_file
 
@@ -684,12 +554,12 @@ def main(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), multilook = 
     
     # Test that output file has been generated correctly.
     if testCompletion(output_file, output_dir = output_dir) == False:
-        for i in infiles:
-            print 'WARNING: %s does not appear to have completed processing successfully.'%i
+        for infile in infiles:
+            print('WARNING: %s does not appear to have completed processing successfully.'%infile)
     
     else:
-        for i in infiles:
-            print 'File %s processed successfully'%i
+        for infile in infiles:
+            print('File %s processed successfully'%infile)
     
     return testCompletion(output_file, output_dir = output_dir)
 
@@ -762,6 +632,6 @@ if __name__ == '__main__':
         
         main_partial = functools.partial(main, output_dir = args.output_dir, temp_dir = args.temp_dir, multilook = args.multilook, output_name = args.output_name, speckle_filter = args.speckle_filter, short_chain = args.short, noorbit = args.noorbit, output_units = args.output_units, gpt = args.gpt, verbose = args.verbose)
                     
-        _run_workers(args.processes, infiles_split)
+        sen2mosaic.multiprocess.runWorkers(main_partial, args.processes, infiles_split)
 
    

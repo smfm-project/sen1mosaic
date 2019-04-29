@@ -1,9 +1,14 @@
 
 import datetime
 import glob
-import lxml.etree as ET
 import numpy as np
 import os
+
+# Test alternate loading of lxml
+import xml.etree.ElementTree as ET
+
+#import lxml.etree as ET
+
 
 import sen2mosaic.utilities
 
@@ -64,7 +69,7 @@ class LoadScene(object):
             return 'BEAM-DIMAP'
 
         else:
-            print 'File %s does not match any expected file pattern'%self.filename
+            print('File %s does not match any expected file pattern'%self.filename)
             raise IOError
     
     def __getImageType(self):
@@ -332,7 +337,7 @@ def getSourceFilesInTile(source_files, md_dest, pol = 'VV', start = '20140101', 
         return True
     
     # Determine which images are within specified tile bounds
-    if verbose: print 'Searching for source files within specified tile...'
+    if verbose: print('Searching for source files within specified tile...')
     
     do_tile = []
     
@@ -351,7 +356,7 @@ def getSourceFilesInTile(source_files, md_dest, pol = 'VV', start = '20140101', 
             do_tile.append(False)
             continue
         
-        if verbose: print '    Found one: %s'%source_file.filename.split('/')[-1]
+        if verbose: print('    Found one: %s'%source_file.filename.split('/')[-1])
         do_tile.append(True)
     
     # Get subset of source_files in specified tile
