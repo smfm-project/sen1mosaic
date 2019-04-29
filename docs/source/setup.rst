@@ -102,7 +102,7 @@ At the time of writing, the installation process is as follows:
 Installing sen1mosaic
 ---------------------
 
-sen1mosaic can be downloaded to a machine from its `repository<https://bitbucket.org/sambowers/sen1mosaic>`_ . To do this, open a terminal window and input:
+sen1mosaic can be downloaded to a machine from its `repository <https://bitbucket.org/sambowers/sen1mosaic>`_ . To do this, open a terminal window and input:
 
 .. code-block:: console
 
@@ -123,7 +123,7 @@ To avoid having to reference the full path of the Python scripts in sen1mosaic, 
 Installing sen2mosaic
 ---------------------
 
-sen1mosaic makes use of some of the functons of sen2mosaic. To install sen2mosaic:
+sen1mosaic makes use of some of the functons of `sen2mosaic <https://bitbucket.org/sambowers/sen2mosaic>`_. To install sen2mosaic:
 
 .. code-block:: console
 
