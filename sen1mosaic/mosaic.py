@@ -210,17 +210,7 @@ def buildVVVH(VV_file, VH_file, md, output_dir = os.getcwd(), output_name = 'S1_
     filename = '%s/%s_%s_VVVH_R%sm.tif'%(output_dir, output_name, 'mean', res)
     
     ds_out = sen2mosaic.IO.createGdalDataset(md, data_out = VV_VH, filename = filename, driver='GTiff', dtype = 6, options = ['COMPRESS=LZW'])
-    
-    #gdal_driver = gdal.GetDriverByName('GTiff')
-    #ds = gdal_driver.Create(filename, ds_VV.RasterXSize, ds_VV.RasterYSize, 1, 6, options = ['COMPRESS=LZW'])
-    #ds.SetGeoTransform(ds_VV.GetGeoTransform())
-    #ds.SetProjection(ds_VV.GetProjection())
-        
-    #ds.GetRasterBand(1).WriteArray(VV_VH)
-    
-    # And write
-    #ds = None
-        
+            
     return filename
 
     
