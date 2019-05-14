@@ -14,47 +14,9 @@ import sen2mosaic.multiprocess
 import pdb
 
 
-### Functions for command line interface.
-
-def _prepInfiles(infiles):
-    """
-    Function to identify valid input files for processing chain
-    
-    Args:
-        infiles: A list of input files, directories, or tiles for Sentinel-1 inputs.
-    Returns:
-        A list of all Sentinel-1 IW GRD files in infiles.
-    """
-    
-    # Get absolute path, stripped of symbolic links
-    infiles = [os.path.abspath(os.path.realpath(infile)) for infile in infiles]
-    
-    # List to collate 
-    infiles_reduced = []
-    
-    for infile in infiles:
-        
-        # Where infile is a directory :
-        infiles_reduced.extend(glob.glob('%s/S1?_IW_GRDH_*_????.zip'%infile))
-        infiles_reduced.extend(glob.glob('%s/S1?_IW_GRDH_*_????/manifest.safe'%infile))
-        infiles_reduced.extend(glob.glob('%s/S1?_IW_GRDH_*_????.SAFE/manifest.safe'%infile))
-        
-        # Where infile is an unzipped SAFE file
-        infiles_reduced.extend(glob.glob('%s/manifest.safe'%infile))
-        
-        # Where infile is a manifest.safe file
-        if infile.split('/')[-1] == 'manifest.safe': infiles_reduced.extend(glob.glob('%s'%infile))
-        
-        # Where infile is a .zip file
-        if infile.split('/')[-1][-4::] == '.zip': infiles_reduced.extend(glob.glob('%s'%infile))
-            
-    # Strip repeats (in case)
-    infiles_reduced = list(set(infiles_reduced))
-    
-    # Reduce input files to only IW GRD files
-    #infiles_reduced = [infile for infile in infiles_reduced if ('_IW_GRDH_' in infile.split('/')[-1])]
-    
-    return infiles_reduced
+############################################
+### Functions for command line interface ###
+############################################
 
 def reduceFilesToTimePeriod(infiles, start, end):
     '''
@@ -178,7 +140,9 @@ def splitFiles(infiles, max_scenes, overlap = False):
     return infiles_split
 
 
-## Primary functions
+#############################
+### Calibration functions ###
+#############################
 
 def calibrateGraph(infile, temp_dir = os.getcwd(), short_chain = False, noorbit = False, output_name = 'processed', gpt = '~/snap/bin/gpt', verbose = False):
     """calibrateGraph(infile, temp_dir = os.getcwd(), short_chain = False, verbose = False)
@@ -233,6 +197,10 @@ def calibrateGraph(infile, temp_dir = os.getcwd(), short_chain = False, noorbit 
     return outfile + '.dim'
 
 
+###########################
+### Multilook functions ###
+###########################
+
 def multilookGraph(infiles, multilook = 2, gpt = '~/snap/bin/gpt', verbose = False):
     """
     Multilook and stitch scenes together. Outputs files to same directory as input file.
@@ -281,55 +249,11 @@ def multilookGraph(infiles, multilook = 2, gpt = '~/snap/bin/gpt', verbose = Fal
     return outfile
 
 
-def correctionGraph(infile, outfile, output_dir = os.getcwd(), multilook = 2, speckle_filter = False, short_chain = False, output_units = 'decibels', gpt = '~/snap/bin/gpt', verbose = False):
-    """
-    Perform radiometic/geometric terrain correction and filtering.
-    
-    Args:
-        infile: Input file from multilookGraph() function.
-        outfile: An output filename from _generateOutputFilename() function.
-        output_dir: Output directory. Defaults to current working directory.
-        multilook: Multilook integer. Should be set to the same as multilookGraph(). Defaults to 2.
-        speckle_filter: Set True to include a Refined Lee speckle filter.
-        short_chain: Set True to run a shorter processing chain that omits some optional preprocessing steps at the expense of output quality.
-        gpt: Path to graph processing tool. Defaults to '~/snap/bin/gpt'.
-        verbose: Print progress from SNAP.
-    
-    Returns:
-        Path to output file.
-    """
-    
-    # Get absolute location of graph processing tool
-    gpt = os.path.realpath(os.path.abspath(os.path.expanduser(gpt)))
-    assert os.path.exists(gpt), "Graph processing tool not found."    
-    
-    # Ensure that output directory has a tailing '/'.
-    output_dir = '%s/'%output_dir.rstrip('/')
-    
-    # Build an output filename
-    output_file = '%s%s'%(output_dir, outfile)
-    
-    # Get extent of input file (for edge correction)
-    extent = getExtent(infile, multilook = multilook)
-    
-    xmlfile = os.path.join(os.path.dirname(__file__), '../cfg/3_terrain_correction.xml')
-    
-    if output_units == 'decibels': xmlfile = xmlfile[:-4] + '_db.xml'
-    if speckle_filter: xmlfile = xmlfile[:-4] + '_filter.xml'
-    if short_chain: xmlfile = xmlfile[:-4] + '_short.xml'
-    
-    # Prepare command
-    command = [gpt, xmlfile, '-x', '-Pinputfile=%s'%infile, '-Poutputfile=%s'%output_file, '-Pextent=%s'%extent]
-    
-    if verbose: print('Executing: %s'%' '.join(command))
-    
-    # Execute chain
-    output_text = sen2mosaic.multiprocess.runCommand(command, verbose = verbose)
-    
-    return output_file
+####################################
+### Terrain correction functions ###
+####################################
 
-
-def getExtent(infile, buffer_size = 1000, multilook = 2, correct = True):
+def _getExtent(infile, buffer_size = 1000, multilook = 2, correct = True):
     '''
     Occasional border artifacts are left in Sentinel-1 data in the range direction. We remove pixels from each edge of the image to catch these. To perform this operation, we must get the extent of the image. This does waste data, but must remain until SNAP/Sentinel-1 data formats are consistent.
     
@@ -383,6 +307,58 @@ def getExtent(infile, buffer_size = 1000, multilook = 2, correct = True):
     
     return ','.join([str(i) for i in extent])
 
+
+def correctionGraph(infile, outfile, output_dir = os.getcwd(), multilook = 2, speckle_filter = False, short_chain = False, output_units = 'decibels', gpt = '~/snap/bin/gpt', verbose = False):
+    """
+    Perform radiometic/geometric terrain correction and filtering.
+    
+    Args:
+        infile: Input file from multilookGraph() function.
+        outfile: An output filename from _generateOutputFilename() function.
+        output_dir: Output directory. Defaults to current working directory.
+        multilook: Multilook integer. Should be set to the same as multilookGraph(). Defaults to 2.
+        speckle_filter: Set True to include a Refined Lee speckle filter.
+        short_chain: Set True to run a shorter processing chain that omits some optional preprocessing steps at the expense of output quality.
+        gpt: Path to graph processing tool. Defaults to '~/snap/bin/gpt'.
+        verbose: Print progress from SNAP.
+    
+    Returns:
+        Path to output file.
+    """
+    
+    # Get absolute location of graph processing tool
+    gpt = os.path.realpath(os.path.abspath(os.path.expanduser(gpt)))
+    assert os.path.exists(gpt), "Graph processing tool not found."    
+    
+    # Ensure that output directory has a tailing '/'.
+    output_dir = '%s/'%output_dir.rstrip('/')
+    
+    # Build an output filename
+    output_file = '%s%s'%(output_dir, outfile)
+    
+    # Get extent of input file (for edge correction)
+    extent = _getExtent(infile, multilook = multilook)
+    
+    xmlfile = os.path.join(os.path.dirname(__file__), '../cfg/3_terrain_correction.xml')
+    
+    if output_units == 'decibels': xmlfile = xmlfile[:-4] + '_db.xml'
+    if speckle_filter: xmlfile = xmlfile[:-4] + '_filter.xml'
+    if short_chain: xmlfile = xmlfile[:-4] + '_short.xml'
+    
+    # Prepare command
+    command = [gpt, xmlfile, '-x', '-Pinputfile=%s'%infile, '-Poutputfile=%s'%output_file, '-Pextent=%s'%extent]
+    
+    if verbose: print('Executing: %s'%' '.join(command))
+    
+    # Execute chain
+    output_text = sen2mosaic.multiprocess.runCommand(command, verbose = verbose)
+    
+    return output_file
+
+
+#################################
+### Main processing functions ###
+#################################
 
 def _getMetaData(infile):
     '''
@@ -521,117 +497,3 @@ def testCompletion(output_file, output_dir = os.getcwd()):
         
     return failed
     
-
-
-def main(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), multilook = 2, output_name = 'processed', speckle_filter = False, short_chain = False, noorbit = False, output_units = 'decibels', gpt = '~/snap/bin/gpt', verbose = False):
-    """main(infiles, output_dir = os.getcwd(), temp_dir = os.getcwd(), multilook = 2, output_name = 'processed', speckle_filter = False, short_chain = False, noorbit = False, output_units = 'decibels', gpt = '~/snap/bin/gpt', verbose = False)
-    
-    Preprocess Sentinel-1 GRD IW data from the Copernicus Open Access Data Hub. This functon takes a list of Sentinel-1 input files, and uses the SNAP graph processing tool to generate radiometric/terrain corrected images.
-    
-    Args:
-        infiles: A list of input Sentinel-1 .zip files to process together. Where > 1 file, the files should all be from one overpass. See function splitFiles() for assistance with this.
-        output_dir: Directory for output .dim/.data files. Defaults to current working directory.
-        temp_dir: Directory to output temporary files. Defaults to current working directory.
-        multilook: Multilook integer. Defaults to 2.
-        output_name: Name to put in output files for identification. Defaults to 'processed'.
-        speckle_filter: Set True to include a Refined Lee speckle filter.
-        short_chain: Set True to run a shorter processing chain that omits some optional preprocessing steps at the expense of output quality.
-        noorbit: Set True to skip the downloading of a precise Sentinel-1 orbit file.
-        output_units: Units to output data, either in decibels or natural units.
-        gpt: Path to SNAP graph processing tool. Defaults to ~/snap/bin/gpt.
-        verbose: Set True to print progress.
-    
-    Returns:
-        A boolean; True where processing completed successfully and False where something went wrong.
-    """
-    
-    # TODO: Insert assert statements to cleanse inputs. In particular, ensure infiles are appropriate.
-        
-    if len(infiles) == 0: "No files meeting date criteria found"
-    
-    # Process input files
-    output_file = processFiles(infiles, output_dir = output_dir, temp_dir = temp_dir, multilook = multilook, output_name = output_name, speckle_filter = speckle_filter, short_chain = short_chain, noorbit = noorbit, output_units = output_units, gpt = gpt, verbose = verbose)
-    
-    # Test that output file has been generated correctly.
-    if testCompletion(output_file, output_dir = output_dir) == False:
-        for infile in infiles:
-            print('WARNING: %s does not appear to have completed processing successfully.'%infile)
-    
-    else:
-        for infile in infiles:
-            print('File %s processed successfully'%infile)
-    
-    return testCompletion(output_file, output_dir = output_dir)
-
-
-
-
-if __name__ == '__main__':
-    """
-    A scipt to pre-process Sentinel-1 IW GRD for mosaicking purposes.
-    """
-    
-    # Set up command line parser
-    parser = argparse.ArgumentParser(description = 'Pre-process Sentinel-1 IW GRD data from the Copernicus Open Access Hub to radiometric/terrain corrected images.')
-
-    parser._action_groups.pop()
-    required = parser.add_argument_group('Required arguments')
-    optional = parser.add_argument_group('Optional arguments')
-
-    # Required arguments
-    
-    # Optional arguments
-    
-    optional.add_argument('infiles', metavar = 'S1_FILES', type = str, default = [os.getcwd()], nargs='*', help='Input files. Specify a valid S1 input file (.zip), multiple files through wildcards, or a directory. Defaults to processing all S1 files in current working directory.')
-    optional.add_argument('-o', '--output_dir', metavar = 'PATH', type = str, default = os.getcwd(), help = "Output directory for processed files. Defaults to current working directory.")
-    optional.add_argument('-n', '--output_name', metavar = 'STR', type = str, default = 'processed', help = "String to be included in output filenames for identification. Defaults to 'processed'.")
-    optional.add_argument('-t', '--temp_dir', metavar = 'PATH', type = str, default = os.getcwd(), help = "Output directory for intermediate files. Defaults to current working directory.")
-    optional.add_argument('-ms', '--max_scenes', metavar = 'N', type = int, default = 3, help = "Maximum number of scenes from an overpass to reconstitute and process together. Higher values result in fewer output files with fewer artefacts at scene boundaries, but require more RAM. Defaults to 3 scenes.")
-    optional.add_argument('-m', '--multilook', metavar = 'N', type = int, default = 2, help = "Multilooking reduces image noise by degrading output resolution from ~10 x 10 m by a factor. Defaults to 2 (~20 x 20 m output).")
-    optional.add_argument('-f', '--speckle_filter', action = 'store_true', help = "Apply a speckle filter (Refined Lee) to output images.")
-    optional.add_argument('-u', '--output_units', metavar='UNITS', type=str, default='decibels', help="Output units, set to either decibels (default) or natural.")
-    optional.add_argument('-s', '--short', action = 'store_true', help = "Perform a more rapid processing chain, ommitting some nonessential preprocessing steps.")
-    optional.add_argument('-no', '--noorbit', action = 'store_true', help = "Skip downloading of a precise orbit file.")
-    optional.add_argument('-g', '--gpt', metavar = 'PATH', type = str, default = '~/snap/bin/gpt', help='Path to graph processing tool. Defaults to ~/snap/bin/gpt.')
-    optional.add_argument('-st', '--start', type = str, default = '20140101', help = "Start date for tiles to include in format YYYYMMDD. Defaults to processing all dates.")
-    optional.add_argument('-en', '--end', type = str, default = datetime.datetime.today().strftime('%Y%m%d'), help = "End date for tiles to include in format YYYYMMDD. Defaults to processing all dates.")
-    optional.add_argument('-v', '--verbose', action = 'store_true', help = "Print script progress.")
-    optional.add_argument('-p', '--processes', type = int, metavar = 'N', default = 1, help = "Specify a maximum number of tiles to process in paralell. Note: more processes will require more resources. Defaults to 1.")
-
-    #optional.add_argument('-ov', '--overlap', action = 'store_true', help = "Overlap scenes by one, which can be used to corret for artefacts at scene cut points. This requires more storage, and longer ocessing time")
-
-
-    # Parse command line arguments    
-    args = parser.parse_args()   
-    
-    # Extract all eligible input files (.zip, or directory containing .zip)
-    infiles = _prepInfiles(args.infiles)
-    
-    # Slim down files to those within date range
-    infiles = reduceFilesToTimePeriod(infiles, args.start, args.end)
-    
-    assert len(infiles) > 0, "No valid input files detected."
-    
-    # Convert arguments to absolute paths    
-    infiles = np.array(sorted([os.path.abspath(i) for i in infiles])) # Also sort, and convert to an array.
-    output_dir = os.path.abspath(args.output_dir)
-    temp_dir = os.path.abspath(args.temp_dir)   
-    
-    # Determine which images should be processed together as one contiguous overpass
-    infiles_split = splitFiles(infiles, args.max_scenes, overlap = False)
-    
-    # Keep things simple if using one process
-    if args.processes == 1:
-        
-        for input_files in infiles_split:
-        
-            # Execute module
-            main(input_files, output_dir = args.output_dir, temp_dir = args.temp_dir, multilook = args.multilook, output_name = args.output_name, speckle_filter = args.speckle_filter, short_chain = args.short, noorbit = args.noorbit, output_units = args.output_units, gpt = args.gpt, verbose = args.verbose)
-    
-    else:
-        
-        main_partial = functools.partial(main, output_dir = args.output_dir, temp_dir = args.temp_dir, multilook = args.multilook, output_name = args.output_name, speckle_filter = args.speckle_filter, short_chain = args.short, noorbit = args.noorbit, output_units = args.output_units, gpt = args.gpt, verbose = args.verbose)
-                    
-        sen2mosaic.multiprocess.runWorkers(main_partial, args.processes, infiles_split)
-
-   
