@@ -69,39 +69,56 @@ Help for ``preprocess.py`` can be viewed by typing ``s1m preprocess --help``:
 
 .. code-block:: console
     
-    usage: preprocess.py [-h] [-o PATH] [-t PATH] [-m N] [-l N] [-f] [-s] [-r]
+    usage: preprocess.py [-h] [-o PATH] [-n STR] [-t PATH] [-ms N] [-m N] [-f]
+                        [-u UNITS] [-s] [-no] [-g PATH] [-st START] [-en END]
                         [-v] [-p N]
                         [S1_FILES [S1_FILES ...]]
 
     Pre-process Sentinel-1 IW GRD data from the Copernicus Open Access Hub to
     radiometric/terrain corrected images.
 
-    Optional arguments:
+    Positional arguments:
     S1_FILES              Input files. Specify a valid S1 input file (.zip),
                             multiple files through wildcards, or a directory.
                             Defaults to processing all S1 files in current working
                             directory.
+
+    Optional arguments:
     -o PATH, --output_dir PATH
                             Output directory for processed files. Defaults to
                             current working directory.
+    -n STR, --output_name STR
+                            String to be included in output filenames for
+                            identification. Defaults to 'processed'.
     -t PATH, --temp_dir PATH
                             Output directory for intermediate files. Defaults to
                             current working directory.
-    -m N, --max_scenes N  Maximum number of scenes from an overpass to
+    -ms N, --max_scenes N
+                            Maximum number of scenes from an overpass to
                             reconstitute and process together. Higher values
                             result in fewer output files with fewer artefacts at
                             scene boundaries, but require more RAM. Defaults to 3
                             scenes.
-    -l N, --multilook N   Multilooking reduces image noise by degrading output
+    -m N, --multilook N   Multilooking reduces image noise by degrading output
                             resolution from ~10 x 10 m by a factor. Defaults to 2
                             (~20 x 20 m output).
     -f, --speckle_filter  Apply a speckle filter (Refined Lee) to output images.
+    -u UNITS, --output_units UNITS
+                            Output units, set to either decibels (default) or
+                            natural.
     -s, --short           Perform a more rapid processing chain, ommitting some
                             nonessential preprocessing steps.
-    -r, --remove          Delete input files after processing is complete.
+    -no, --noorbit        Skip downloading of a precise orbit file.
+    -g PATH, --gpt PATH   Path to graph processing tool. Defaults to
+                            ~/snap/bin/gpt.
+    -st START, --start START
+                            Start date for tiles to include in format YYYYMMDD.
+                            Defaults to processing all dates.
+    -en END, --end END    End date for tiles to include in format YYYYMMDD.
+                            Defaults to processing all dates.
     -v, --verbose         Print script progress.
     -p N, --processes N   Specify a maximum number of tiles to process in
-                            paralell. Note: more processes will require more
+                            parallel. Note: more processes will require more
                             resources. Defaults to 1.
 
 For example, to run ``preprocess.py`` on a set of Sentinel-1 GRD IW .zip files in a directory (specifying an output and a temporary files directory), use the following command:
@@ -122,8 +139,8 @@ Help for ``mosaic.py`` can be viewed by typing ``s1m mosaic --help``:
 
 .. code-block:: console
     
-    usage: mosaic.py [-h] [-te XMIN YMIN XMAX YMAX] [-e EPSG] [-r RES] [-o PATH]
-                    [-n NAME] [-p POL] [-v]
+    usage: mosaic.py [-h] [-te XMIN YMIN XMAX YMAX] [-e EPSG] [-res RES]
+                    [-st START] [-en END] [-o PATH] [-n NAME] [-p POL] [-v]
                     [S1_FILES [S1_FILES ...]]
 
     Collate preprocessed Sentinel-1 data into mosaicked tiles. This script mosaics
@@ -136,16 +153,22 @@ Help for ``mosaic.py`` can be viewed by typing ``s1m mosaic --help``:
                             Extent of output image tile, in format <xmin, ymin,
                             xmax, ymax>.
     -e EPSG, --epsg EPSG  EPSG code for output image tile CRS. This must be UTM.
-                            Find the EPSG code of your output CRS as https://www
-                            .epsg-registry.org/.
+                            Find the EPSG code of your output CRS as
+                            https://www.epsg-registry.org/.
+    -res RES, --resolution RES
+                            Output resolution in metres. If not specified,
+                            defaults to 20m.
 
     optional arguments:
     S1_FILES              Input files from preprocess.py. Specify a valid S1
                             input file (.dim), multiple files through wildcards,
                             or a directory. Defaults to processing all S1 files in
                             current working directory.
-    -r RES, --resolution RES
-                            Output resolution in metres. Defaults to 20 m.
+    -st START, --start START
+                            Start date for tiles to include in format YYYYMMDD.
+                            Defaults to processing all dates.
+    -en END, --end END    End date for tiles to include in format YYYYMMDD.
+                            Defaults to processing all dates.
     -o PATH, --output_dir PATH
                             Output directory. If nothing specified, downloads will
                             output to the present working directory, given a
@@ -156,7 +179,6 @@ Help for ``mosaic.py`` can be viewed by typing ``s1m mosaic --help``:
     -p POL, --pol POL     Specify a single polarisation ('VV' or 'VH') or
                             'both'. Defaults to processing both.
     -v, --verbose         Print script progress.
-
 
 For example, to run ``mosaic.py`` in the directory ``/path/to/S1_data/`` which contains pre-processed Sentinel-1 files to create a 200 x 200 km output tile in the UTM36S projection at 20 m resolution, input:
 
