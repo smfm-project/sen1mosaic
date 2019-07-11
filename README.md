@@ -2,6 +2,7 @@
 
 ### Latest updates ###
 
+* _11/07/2019_: Updated for compatability with latest sen2mosaic. Note that command line scripts have also moved to a new location (.../sen1mosaic/cli).
 * Now compatable with Python 3. It should remain possible to run these scripts with Python 2, but this will no longer be supported.
 
 ### What is this repository for? ###
