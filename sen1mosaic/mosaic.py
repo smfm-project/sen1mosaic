@@ -237,4 +237,9 @@ def buildVRT(red_band, green_band, blue_band, output_path):
     
     subprocess.call(command)
 
-
+if __name__ == '__main__':
+    '''
+    '''
+        
+    print('The sen1mosaic command line interface has been moved! Please use scripts in .../sen1mosaic/cli/ to operate sen2mosaic from the command line.')
+    

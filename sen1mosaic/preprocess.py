@@ -497,3 +497,10 @@ def testCompletion(output_file, output_dir = os.getcwd()):
         
     return failed
     
+
+if __name__ == '__main__':
+    '''
+    '''
+        
+    print('The sen1mosaic command line interface has been moved! Please use scripts in .../sen1mosaic/cli/ to operate sen2mosaic from the command line.')
+    

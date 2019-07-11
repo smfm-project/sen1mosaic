@@ -88,12 +88,13 @@ if __name__ == "__main__":
     # Required arguments
     required.add_argument('-te', '--target_extent', nargs = 4, metavar = ('XMIN', 'YMIN', 'XMAX', 'YMAX'), type = float, help = "Extent of output image tile, in format <xmin, ymin, xmax, ymax>.")
     required.add_argument('-e', '--epsg', type=int, help="EPSG code for output image tile CRS. This must be UTM. Find the EPSG code of your output CRS as https://www.epsg-registry.org/.")
+    required.add_argument('-res', '--resolution', type = int, metavar = 'RES', default = 20, help=  "Output resolution in metres. If not specified, defaults to 20m.")
 
     # Optional arguments
     optional.add_argument('infiles', metavar = 'S1_FILES', type = str, default = [os.getcwd()], nargs = '*', help = 'Input files from preprocess.py. Specify a valid S1 input file (.dim), multiple files through wildcards, or a directory. Defaults to processing all S1 files in current working directory.')
     optional.add_argument('-st', '--start', type = str, default = '20140101', help = "Start date for tiles to include in format YYYYMMDD. Defaults to processing all dates.")
     optional.add_argument('-en', '--end', type = str, default = datetime.datetime.today().strftime('%Y%m%d'), help = "End date for tiles to include in format YYYYMMDD. Defaults to processing all dates.")
-    optional.add_argument('-r', '--resolution', type = int, metavar = 'RES', default = 20, help=  "Output resolution in metres. Defaults to 20 m.")
+    #optional.add_argument('-res', '--resolution', type = int, metavar = 'RES', default = 20, help=  "Output resolution in metres. Defaults to 20 m.")
     optional.add_argument('-o', '--output_dir', type = str, metavar = 'PATH', default = os.getcwd(), help = "Output directory. If nothing specified, downloads will output to the present working directory, given a standard filename.")
     optional.add_argument('-n', '--output_name', type=str, metavar = 'NAME', default = 'S1_output', help="Optionally specify a string to precede output filename.")
     optional.add_argument('-p', '--pol', type=str, metavar = 'POL', default = 'both', help="Specify a single polarisation ('VV' or 'VH') or 'both'. Defaults to processing both.")
