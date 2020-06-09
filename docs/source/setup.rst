@@ -43,7 +43,7 @@ To ensure you are working with the appropriate version of Python as well as the 
 
 .. code-block:: console
     
-    conda create -n sen1mosaic -c conda-forge python=3.7 scipy pandas psutil scikit-image gdal opencv
+    conda create -n sen1mosaic -c conda-forge python=3.7 scipy pandas psutil scikit-image gdal pyshp opencv
 
 Activate the ``sen1mosaic`` environment whenever opening a new terminal window by running this command:
 
