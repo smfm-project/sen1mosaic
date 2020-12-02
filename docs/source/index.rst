@@ -16,6 +16,11 @@ This repository contains three command-line based scripts to perform the followi
 * Executing `SNAP <http://step.esa.int/main/toolboxes/snap/>`_ graph processing tool to calibrate, filter and perform terrain-correction on Sentinel-1 GRD images.
 * Mosaicking pre-processed Sentinel-1 files into larger GeoTIFF files that are suitable for image classification.
 
+More information
+----------------
+
+For more information, refer to the 'Satellite Monitoring for Forest Management' `webpage <https://www.smfm-project.com/>`_..
+
 How do I get set up?
 --------------------
 
