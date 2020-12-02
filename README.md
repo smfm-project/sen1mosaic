@@ -20,7 +20,7 @@ This repository contains three command-line based scripts to perform the followi
 
 These tools are written in Python for use in Linux. You will need to have first successfully installed:
 
-* [sentinelhub](https://github.com/sinergise/sentinelhub): A library for searching and downloading Sentinel-2 products.
+* [sentinelhub](https://github.com/sinergise/sentinelhub): A library for searching and downloading Sentinel-1 products.
 * [SNAP](http://step.esa.int/main/toolboxes/snap/): Tools for pre-processing data from Sentinel-1.
 
 The modules used in these scripts are all available in [Anaconda](https://www.anaconda.com/download/) Python.
