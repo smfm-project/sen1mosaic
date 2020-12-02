@@ -106,7 +106,7 @@ sen1mosaic can be downloaded to a machine from its `repository <https://bitbucke
 
 .. code-block:: console
 
-    git clone https://sambowers@bitbucket.org/sambowers/sen1mosaic.git
+    git clone https://github.org/smfm-project/sen1mosaic.git
 
 To install sen1mosaic, navigate to the sen1mosaic directory and run the following within your sen1mosaic environment
 
@@ -127,9 +127,9 @@ sen1mosaic makes use of some of the functons of `sen2mosaic <https://bitbucket.o
 
 .. code-block:: console
 
-    git clone https://sambowers@bitbucket.org/sambowers/sen2mosaic.git
+    git clone https://github.com/smfm-project/sen2mosaic.git
 
-To install sen2mosaic, navigate to the sen2mosaic directory and run the following within your sen2mosaic environment
+To install sen2mosaic, navigate to the sen2mosaic directory and run the following within your sen1mosaic environment
 
 .. code-block:: console
     

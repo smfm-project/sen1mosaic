@@ -3,8 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to sen1mosaic's documentation!
-======================================
+Documentation for SMFM sen1mosaic
+=================================
 
 This is a set of tools to aid in the production of large-scale seasonal mosaic products from Sentinel-1 data.
 
